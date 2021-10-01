@@ -1,0 +1,3 @@
+[submodule "picl-k3OS-image-generator"]
+	path = picl-k3OS-image-generator
+	url = git@code.neumanny.net:/srv/git/picl-k3OS-image-generator.git
