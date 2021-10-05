@@ -4,3 +4,6 @@
 [submodule "longhorn"]
 	path = longhorn
 	url = https://github.com/longhorn/longhorn.git
+[submodule "rpifanctl"]
+	path = rpifanctl
+	url = git@github.com:mateumann/rpifanctl.git
