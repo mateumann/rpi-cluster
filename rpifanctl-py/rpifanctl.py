@@ -1,0 +1,144 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+
+from typing import List
+import logging
+from dataclasses import dataclass, field
+from os.path import basename, splitext
+from signal import signal, SIGTERM, SIGINT
+# from sys import exit
+from time import sleep
+import sys
+
+try:
+    from RPi import GPIO
+except ModuleNotFoundError:
+    from fake_rpi.RPi import GPIO
+
+
+app_name = splitext(basename(__file__))[0]
+formatter = logging.Formatter(fmt='%(asctime)s [%(levelname)s] '
+                                  '[%(name)s] %(message)s',
+                              datefmt='%Y-%m-%d %H:%M:%S')
+handler = logging.StreamHandler()
+handler.setFormatter(formatter)
+log = logging.getLogger(app_name)
+log.addHandler(handler)
+log.setLevel(logging.DEBUG)
+
+
+class PiFanException(Exception):
+    """Exception specific to the Raspberry Pi Fan Speed Controller."""
+
+
+@dataclass
+class FanSpeed:
+    """Raspberry Pi Fan Speed Controller fan configuration."""
+
+    pin: int = 21
+    steps: List[float] = field(default_factory=list)
+
+
+@dataclass
+class Hysteresis:
+    """Raspberry Pi Fan Speed Controller hysteresis configuration."""
+
+    up: float = 1.0
+    down: float = 1.0
+
+
+@dataclass
+class CPUTemp:
+    """Raspberry Pi Fan Speed Controller cpu temperature configuration."""
+
+    hysteresis: Hysteresis
+    steps: List[int] = field(default_factory=list)
+    thermal_zone: int = 0
+
+
+@dataclass
+class Config:
+    """Raspberry Pi Fan Speed Controller application configuration."""
+
+    cpu_temp: CPUTemp
+    fan_speed: FanSpeed
+    probe_delay: float = 1.0
+    pwm_freq: float = 25.0
+    description: str = "Raspberry Pi Fan Speed Controller"
+
+    def validate(self):
+        """Validate configuration."""
+        if len(self.fan_speed.steps) < 1:
+            raise PiFanException(
+                    "At least one fan speed step should be defined.")
+        if len(self.cpu_temp.steps) != len(self.fan_speed.steps):
+            raise PiFanException(
+                    f"Number of temperature steps {self.cpu_temp.steps} and "
+                    f"speed steps {self.fan_speed.steps} don't match.")
+
+
+def setup(c: Config) -> GPIO.PWM:
+    GPIO.setmode(GPIO.BCM)
+    GPIO.setup(c.fan_speed.pin, GPIO.OUT, initial=GPIO.LOW)
+    pwm = GPIO.PWM(c.fan_speed.pin, c.pwm_freq)
+    pwm.start(0)
+    return pwm
+
+
+def teardown(c: Config, _signal_number: int, _stack_frame: object):
+    GPIO.cleanup()
+    log.info("%s gracefully stopped.", c.description)
+    sys.exit(0)
+
+
+def get_temperature(tz: int = 0) -> float:
+    with open(f"/sys/class/thermal/thermal_zone{tz}/temp", "rb") as handle:
+        return float(handle.read()) / 1000
+
+
+def calculate_fan_speed(c: Config, temperature: float) -> float:
+    if temperature < c.cpu_temp.steps[0]:
+        return 0.0
+    for i, temp_step in enumerate(c.cpu_temp.steps[:-1]):
+        if temp_step <= temperature < c.cpu_temp.steps[i+1]:
+            return (c.fan_speed.steps[i+1] - c.fan_speed.steps[i]) / \
+                   (c.cpu_temp.steps[i+1] - c.cpu_temp.steps[i]) * \
+                   (temperature - temp_step) + \
+                   c.fan_speed.steps[i]
+    return c.fan_speed.steps[-1]
+
+
+##############################################################################
+
+if __name__ == "__main__":
+    config = Config(cpu_temp=CPUTemp(hysteresis=Hysteresis(up=1.0, down=3.0),
+                                     steps=[25, 40, 80],
+                                     thermal_zone=7),
+                    fan_speed=FanSpeed(steps=[30, 50, 100]),
+                    probe_delay=1.5)
+    config.validate()
+
+    fan = setup(config)
+    signal(SIGTERM, lambda n, f: teardown(config, n, f))
+    signal(SIGINT, lambda n, f: teardown(config, n, f))
+
+    # import pdb; pdb.set_trace()
+
+    temp_info = ", ".join('{0}°C'.format(t) for t in config.cpu_temp.steps)
+    speed_info = ", ".join('{0}%'.format(r) for r in config.fan_speed.steps)
+    log.info("%s started, mapping: [%s] → [%s].",
+             config.description, temp_info, speed_info)
+
+    cpu_temp_prev: float = 0.0
+    while True:
+        sleep(config.probe_delay)
+        cpu_temp = get_temperature(config.cpu_temp.thermal_zone)
+        if cpu_temp_prev - cpu_temp < config.cpu_temp.hysteresis.down \
+                and cpu_temp - cpu_temp_prev < config.cpu_temp.hysteresis.up:
+            continue
+        log.debug("Temperature changed above hysteresis: %.1f°C", cpu_temp)
+        cpu_temp_prev = cpu_temp
+        fan_speed = calculate_fan_speed(config, cpu_temp)
+        if fan_speed == 0.0 or fan_speed >= config.fan_speed.steps[0]:
+            fan.ChangeDutyCycle(fan_speed)
+            log.debug("Fan speed set to %.1f%%", fan_speed)
