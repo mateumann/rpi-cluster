@@ -1,0 +1,93 @@
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: nextcloud
+  labels:
+    name: nextcloud
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: postgresql
+  namespace: nextcloud
+spec:
+  storageClassName: longhorn
+  accessModes:
+    - ReadWriteMany
+  resources:
+    requests:
+      storage: "1Gi"
+---
+kind: Service
+apiVersion: v1
+metadata:
+  name: postgresql
+  namespace: nextcloud
+spec:
+  selector:
+    app: postgresql
+  ports:
+    - protocol: TCP
+      port: 5432
+      targetPort: 5432
+  type: LoadBalancer
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: postgresql
+  namespace: nextcloud
+  labels:
+    app: postgresql
+    tier: db
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: postgresql
+      tier: db
+  template:
+    metadata:
+      labels:
+        app: postgresql
+        tier: db
+    spec:
+      containers:
+        - name: postgresql
+          image: postgresql:14.0-alpine
+          resources:
+            limits:
+              memory: 512Gi
+              cpu: 500m
+            requests:
+              memory: 384Mi
+              cpu: 200m
+          volumeMounts:
+            - mountPath: /var/lib/postgresql/data
+              name: postgresql
+          env:
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: postgresql
+                  key: password
+            - name: POSTGRES_USER
+              valueFrom:
+                secretKeyRef:
+                  name: postgresql
+                  key: username
+            - name: POSTGRES_DB
+              valueFrom:
+                secretKeyRef:
+                  name: postgresql
+                  key: db
+          ports:
+            - containerPort: 5432
+      volumes:
+        - name: postgresql
+          persistentVolumeClaim:
+            claimName: postgresql
+      # nodeSelector:
+      #   disktype: ssd
+
