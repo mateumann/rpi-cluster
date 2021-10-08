@@ -2,9 +2,10 @@
 apiVersion: v1
 kind: Namespace
 metadata:
-  name: nextcloud
+  annotations:
   labels:
     name: nextcloud
+  name: nextcloud
 ---
 apiVersion: v1
 kind: PersistentVolumeClaim
@@ -17,7 +18,7 @@ spec:
     - ReadWriteMany
   resources:
     requests:
-      storage: "4Gi"
+      storage: 4Gi
 ---
 apiVersion: v1
 kind: PersistentVolumeClaim
@@ -30,20 +31,20 @@ spec:
     - ReadWriteMany
   resources:
     requests:
-      storage: "600Gi"
+      storage: 600Gi
 ---
-kind: Service
 apiVersion: v1
+kind: Service
 metadata:
   name: nextcloud
   namespace: nextcloud
 spec:
   selector:
-    app: nextcloud
+    app: nginx
   ports:
     - protocol: TCP
-      port: 9000
-      targetPort: 9000
+      port: 80
+      targetPort: 80
   type: LoadBalancer
 ---
 apiVersion: apps/v1
@@ -55,7 +56,7 @@ metadata:
     app: nextcloud
     tier: app
 spec:
-  replicas: 3
+  replicas: 1
   selector:
     matchLabels:
       app: nextcloud
@@ -67,14 +68,35 @@ spec:
         tier: app
     spec:
       containers:
+        - name: nginx
+          image: nginx:1.21.3-alpine
+          resources:
+            limits:
+              memory: 64Mi
+              cpu: 200m
+            requests:
+              memory: 32Mi
+              cpu: 100m
+          volumeMounts:
+            - mountPath: /var/www/html
+              name: nextcloud-app
+            - mountPath: /var/www/html/data
+              name: nextcloud-data
+          env:
+            - name: NGINX_HOST
+              value: cloud.neumanny.live
+            # - name: NGINX_PORT
+            #   value: "80"
+          ports:
+            - containerPort: 80
         - name: nextcloud
           image: nextcloud:22.2.0-fpm-alpine
           resources:
             limits:
-              memory: "768Mi"
               cpu: "1"
+              memory: 768Mi
             requests:
-              memory: "128Mi"
+              memory: 128Mi
               cpu: 200m
           volumeMounts:
             - mountPath: /var/www/html
@@ -82,6 +104,25 @@ spec:
             - mountPath: /var/www/html/data
               name: nextcloud-data
           env:
+            - name: REDIS_HOST
+              value: redis
+            - name: POSTGRES_HOST
+              value: postgresql
+            - name: POSTGRES_DB
+              valueFrom:
+                secretKeyRef:
+                  name: postgresql
+                  key: db
+            - name: POSTGRES_USER
+              valueFrom:
+                secretKeyRef:
+                  name: postgresql
+                  key: username
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: postgresql
+                  key: password
             - name: NEXTCLOUD_ADMIN_USER
               valueFrom:
                 secretKeyRef:
@@ -93,23 +134,7 @@ spec:
                   name: nextcloud-admin
                   key: password
             - name: NEXTCLOUD_TRUSTED_DOMAINS
-              value: nextcloud.arnor nextcloud.aman cloud.neumanny.live
-            - name: MYSQL_USER
-              valueFrom:
-                secretKeyRef:
-                  name: nextcloud-password
-                  key: username
-            - name: MYSQL_PASSWORD
-              valueFrom:
-                secretKeyRef:
-                  name: nextcloud-password
-                  key: password
-            - name: MYSQL_DATABASE
-              value: nextcloud
-            - name: MYSQL_HOST
-              value: mariadb
-            - name: REDIS_HOST
-              value: redis
+              value: nextcloud.lorion cloud.neumanny.live
           ports:
             - containerPort: 9000
       volumes:
@@ -119,15 +144,22 @@ spec:
         - name: nextcloud-data
           persistentVolumeClaim:
             claimName: data
-#      affinity:
-#        nodeAffinity:
-#          requiredDuringSchedulingIgnoredDuringExecution:
-#            nodeSelectorTerms:
-#              - matchExpressions:
-#                - key: tier
-#                  operator: NotIn
-#                  values:
-#                    - db
-#                    - cache
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+              - matchExpressions:
+                  - key: kubernetes.io/role
+                    operator: In
+                    values:
+                      - worker
+        podAntiAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            - labelSelector:
+                matchExpressions:
+                  - key: app
+                    operator: In
+                    values:
+                      - nextcloud
+              topologyKey: kubernetes.io/hostname
 ---
-
