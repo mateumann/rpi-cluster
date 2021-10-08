@@ -12,12 +12,12 @@ metadata:
   name: postgresql
   namespace: nextcloud
 spec:
-  storageClassName: longhorn
+  storageClassName: longhorn-hdd
   accessModes:
     - ReadWriteMany
   resources:
     requests:
-      storage: "1Gi"
+      storage: "2Gi"
 ---
 kind: Service
 apiVersion: v1

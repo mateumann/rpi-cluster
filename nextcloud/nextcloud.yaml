@@ -13,7 +13,7 @@ metadata:
   name: nginx-logs
   namespace: nextcloud
 spec:
-  storageClassName: longhorn
+  storageClassName: longhorn-ssd
   accessModes:
     - ReadWriteMany
   resources:
@@ -23,10 +23,10 @@ spec:
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
-  name: app
+  name: nextcloud-app
   namespace: nextcloud
 spec:
-  storageClassName: longhorn
+  storageClassName: longhorn-hdd
   accessModes:
     - ReadWriteMany
   resources:
@@ -36,10 +36,10 @@ spec:
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
-  name: data
+  name: nextcloud-data
   namespace: nextcloud
 spec:
-  storageClassName: longhorn
+  storageClassName: longhorn-hdd
   accessModes:
     - ReadWriteMany
   resources:
@@ -125,7 +125,7 @@ data:
         location ~ ^/(?:\.|autotest|occ|issue|indie|db_|console)                { return 404; }
 
         location ~ \.php(?:$|/) {
-            rewrite ^/(?!index|info|remote|public|cron|core\/ajax\/update|status|ocs\/v[12]|updater\/.+|oc[ms]-provider\/.+|.+\/richdocumentscode\/proxy) /index.php$request_uri;
+            rewrite ^/(?!index|remote|public|cron|core\/ajax\/update|status|ocs\/v[12]|updater\/.+|oc[ms]-provider\/.+|.+\/richdocumentscode\/proxy) /index.php$request_uri;
             fastcgi_split_path_info ^(.+?\.php)(/.*)$;
             set $path_info $fastcgi_path_info;
 
@@ -164,7 +164,23 @@ data:
             try_files $uri $uri/ /index.php$request_uri;
         }
     }
-
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: fpm-php-www-config
+  namespace: nextcloud
+data:
+  www.conf: |
+    [www]
+    user = www-data
+    group = www-data
+    listen = 127.0.0.1:9000
+    pm = dynamic
+    pm.max_children = 10
+    pm.start_servers = 2
+    pm.min_spare_servers = 1
+    pm.max_spare_servers = 3
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -175,7 +191,7 @@ metadata:
     app: nextcloud
     tier: app
 spec:
-  replicas: 2
+  replicas: 1
   selector:
     matchLabels:
       app: nextcloud
@@ -194,11 +210,11 @@ spec:
               memory: 64Mi
               cpu: 200m
             requests:
-              memory: 32Mi
-              cpu: 100m
+              memory: 16Mi
+              cpu: 50m
           volumeMounts:
-            - name: nginx-configs
-              mountPath: /etc/nginx/conf.d
+            - name: nginx-config
+              mountPath: /etc/nginx/conf.d/default.conf
             - name: nginx-logs
               mountPath: /var/log/nginx
             - name: nextcloud-app
@@ -211,16 +227,18 @@ spec:
           image: nextcloud:22.2.0-fpm-alpine
           resources:
             limits:
-              cpu: "1"
               memory: 768Mi
+              cpu: "1"
             requests:
-              memory: 128Mi
-              cpu: 200m
+              memory: 64Mi
+              cpu: 100m
           volumeMounts:
-            - mountPath: /var/www/html
-              name: nextcloud-app
-            - mountPath: /var/www/html/data
-              name: nextcloud-data
+            # - name: fpm-php-www-config
+            #   mountPath: /usr/local/etc/php-fpm.d/www.conf
+            - name: nextcloud-app
+              mountPath: /var/www/html
+            - name: nextcloud-data
+              mountPath: /var/www/html/data
           env:
             - name: REDIS_HOST
               value: redis
@@ -252,11 +270,16 @@ spec:
                   name: nextcloud-admin
                   key: password
             - name: NEXTCLOUD_TRUSTED_DOMAINS
-              value: nextcloud.lorion cloud.neumanny.live
+              value: cloud.neumanny.live
+            - name: TRUSTED_PROXIES
+              value: cloud.neumanny.live 172.104.150.140 10.42.0.0/15
           ports:
             - containerPort: 9000
       volumes:
-        - name: nginx-configs
+        - name: fpm-php-www-config
+          configMap:
+            name: fpm-php-www-config
+        - name: nginx-config
           configMap:
             name: nginx-config
         - name: nginx-logs
@@ -264,10 +287,10 @@ spec:
             claimName: nginx-logs
         - name: nextcloud-app
           persistentVolumeClaim:
-            claimName: app
+            claimName: nextcloud-app
         - name: nextcloud-data
           persistentVolumeClaim:
-            claimName: data
+            claimName: nextcloud-data
       affinity:
         nodeAffinity:
           requiredDuringSchedulingIgnoredDuringExecution:
