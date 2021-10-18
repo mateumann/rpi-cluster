@@ -112,8 +112,8 @@ def calculate_fan_speed(c: Config, temperature: float) -> float:
 
 if __name__ == "__main__":
     config = Config(cpu_temp=CPUTemp(hysteresis=Hysteresis(up=1.0, down=3.0),
-                                     steps=[25, 40, 80],
-                                     thermal_zone=7),
+                                     steps=[50, 55, 80],
+                                     thermal_zone=0),
                     fan_speed=FanSpeed(steps=[30, 50, 100]),
                     probe_delay=1.5)
     config.validate()
