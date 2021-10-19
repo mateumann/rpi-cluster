@@ -12,7 +12,7 @@ metadata:
   name: postgresql
   namespace: nextcloud
 spec:
-  storageClassName: longhorn-hdd
+  storageClassName: longhorn-ssd-fast
   accessModes:
     - ReadWriteMany
   resources:
@@ -88,6 +88,6 @@ spec:
         - name: postgresql
           persistentVolumeClaim:
             claimName: postgresql
-      # nodeSelector:
-      #   disktype: ssd
+      nodeSelector:
+        lindon.endor/storage-ssd: "fast"
 

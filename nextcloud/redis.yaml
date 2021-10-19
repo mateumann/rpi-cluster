@@ -12,7 +12,7 @@ metadata:
   name: redis
   namespace: nextcloud
 spec:
-  storageClassName: longhorn-ssd
+  storageClassName: longhorn-ssd-fast
   accessModes:
     - ReadWriteMany
   resources:
@@ -73,5 +73,5 @@ spec:
           persistentVolumeClaim:
             claimName: redis
       nodeSelector:
-        lindon/storage-ssd: "true"
+        lindon.endor/storage-ssd: "fast"
 
