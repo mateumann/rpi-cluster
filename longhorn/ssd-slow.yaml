@@ -1,0 +1,14 @@
+allowVolumeExpansion: true
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: longhorn-ssd-slow
+parameters:
+  diskSelector: ssd,slow
+  fsType: xfs
+  nodeSelector: lindon.endor/storage-ssd=slow
+  numberOfReplicas: "1"
+  staleReplicaTimeout: "720"
+provisioner: driver.longhorn.io
+reclaimPolicy: Delete
+volumeBindingMode: Immediate

@@ -1,0 +1,16 @@
+allowVolumeExpansion: true
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: longhorn-hdd
+  annotations:
+    storageclass.kubernetes.io/is-default-class: "true"
+parameters:
+  diskSelector: hdd
+  fsType: xfs
+  nodeSelector: lindon.endor/storage-hdd=true
+  numberOfReplicas: "3"
+  staleReplicaTimeout: "2880"
+provisioner: driver.longhorn.io
+reclaimPolicy: Delete
+volumeBindingMode: Immediate
