@@ -13,7 +13,7 @@ metadata:
   name: nginx-logs
   namespace: nextcloud
 spec:
-  storageClassName: longhorn-ssd
+  storageClassName: longhorn-ssd-fast
   accessModes:
     - ReadWriteMany
   resources:
@@ -26,7 +26,7 @@ metadata:
   name: nextcloud-app
   namespace: nextcloud
 spec:
-  storageClassName: longhorn-hdd
+  storageClassName: longhorn-ssd-slow
   accessModes:
     - ReadWriteMany
   resources:
@@ -302,6 +302,11 @@ spec:
                     operator: In
                     values:
                       - worker
+              - matchExpressions:
+                  - key: lindon.endor/machine-type
+                    operator: In
+                    values:
+                      - rpi4-large
         podAntiAffinity:
           requiredDuringSchedulingIgnoredDuringExecution:
             - labelSelector:
