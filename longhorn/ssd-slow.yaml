@@ -4,9 +4,9 @@ kind: StorageClass
 metadata:
   name: longhorn-ssd-slow
 parameters:
-  diskSelector: ssd,slow
   fsType: xfs
-  nodeSelector: lindon.endor/storage-ssd=slow
+  diskSelector: ssd,slow
+  nodeSelector: ssd-slow
   numberOfReplicas: "1"
   staleReplicaTimeout: "720"
 provisioner: driver.longhorn.io

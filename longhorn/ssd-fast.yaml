@@ -4,9 +4,9 @@ kind: StorageClass
 metadata:
   name: longhorn-ssd-fast
 parameters:
-  diskSelector: ssd,fast
   fsType: xfs
-  nodeSelector: lindon.endor/storage-ssd=fast
+  diskSelector: ssd,fast
+  nodeSelector: ssd-fast
   numberOfReplicas: "2"
   staleReplicaTimeout: "2880"
 provisioner: driver.longhorn.io

@@ -6,9 +6,9 @@ metadata:
   annotations:
     storageclass.kubernetes.io/is-default-class: "true"
 parameters:
-  diskSelector: hdd
   fsType: xfs
-  nodeSelector: lindon.endor/storage-hdd=true
+  diskSelector: hdd
+  nodeSelector: hdd
   numberOfReplicas: "3"
   staleReplicaTimeout: "2880"
 provisioner: driver.longhorn.io
