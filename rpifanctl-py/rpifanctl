@@ -24,7 +24,7 @@ handler = logging.StreamHandler()
 handler.setFormatter(formatter)
 log = logging.getLogger(app_name)
 log.addHandler(handler)
-log.setLevel(logging.DEBUG)
+log.setLevel(logging.INFO)
 
 
 class PiFanException(Exception):
@@ -141,4 +141,4 @@ if __name__ == "__main__":
         fan_speed = calculate_fan_speed(config, cpu_temp)
         if fan_speed == 0.0 or fan_speed >= config.fan_speed.steps[0]:
             fan.ChangeDutyCycle(fan_speed)
-            log.debug("Fan speed set to %.1f%%", fan_speed)
+            log.info("Fan speed set to %.1f%%", fan_speed)
