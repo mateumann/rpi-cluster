@@ -74,7 +74,7 @@ metadata:
     app: nextcloud
     tier: app
 spec:
-  replicas: 1
+  replicas: 3
   selector:
     matchLabels:
       app: nextcloud
@@ -161,7 +161,7 @@ spec:
                   - key: lindon.endor/machine-type
                     operator: In
                     values:
-                      - rpi4-large
+                      - pi4-large
         podAntiAffinity:
           requiredDuringSchedulingIgnoredDuringExecution:
             - labelSelector:
