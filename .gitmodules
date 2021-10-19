@@ -1,9 +1,6 @@
 [submodule "picl-k3OS-image-generator"]
 	path = picl-k3OS-image-generator
 	url = git@code.neumanny.net:/srv/git/picl-k3OS-image-generator.git
-[submodule "longhorn"]
-	path = longhorn
-	url = https://github.com/longhorn/longhorn.git
 [submodule "rpifanctl"]
 	path = rpifanctl
 	url = git@github.com:mateumann/rpifanctl.git

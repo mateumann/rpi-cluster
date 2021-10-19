@@ -1,0 +1,14 @@
+allowVolumeExpansion: true
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: longhorn-ssd-slow
+parameters:
+  fsType: xfs
+  diskSelector: ssd,slow
+  nodeSelector: ssd-slow
+  numberOfReplicas: "1"
+  staleReplicaTimeout: "720"
+provisioner: driver.longhorn.io
+reclaimPolicy: Delete
+volumeBindingMode: Immediate
