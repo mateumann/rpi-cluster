@@ -12,6 +12,7 @@ parameters:
   nodeSelector: hdd
   numberOfReplicas: "3"
   staleReplicaTimeout: "2880"
+  encrypted: "true"
   csi.storage.k8s.io/provisioner-secret-name: "longhorn-crypto"
   csi.storage.k8s.io/provisioner-secret-namespace: "longhorn-system"
   csi.storage.k8s.io/node-publish-secret-name: "longhorn-crypto"
