@@ -2,38 +2,39 @@
 apiVersion: v1
 kind: Namespace
 metadata:
-  name: nextcloud
+  annotations:
   labels:
     name: nextcloud
+  name: nextcloud
 ---
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
-  name: app
+  name: nextcloud-app
   namespace: nextcloud
 spec:
-  storageClassName: longhorn
+  storageClassName: longhorn-ssd-slow
   accessModes:
     - ReadWriteMany
   resources:
     requests:
-      storage: "4Gi"
+      storage: 4Gi
 ---
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
-  name: data
+  name: nextcloud-data
   namespace: nextcloud
 spec:
-  storageClassName: longhorn
+  storageClassName: longhorn-hdd-crypto
   accessModes:
     - ReadWriteMany
   resources:
     requests:
-      storage: "600Gi"
+      storage: 600Gi
 ---
+apiVersion: v1
 kind: Service
-apiVersion: v1
 metadata:
   name: nextcloud
   namespace: nextcloud
@@ -41,10 +42,28 @@ spec:
   selector:
     app: nextcloud
   ports:
-    - protocol: TCP
-      port: 9000
+    - port: 9000
       targetPort: 9000
+      protocol: TCP
   type: LoadBalancer
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: fpm-php-www-config
+  namespace: nextcloud
+data:
+  www.conf: |
+    [www]
+    user = www-data
+    group = www-data
+    listen = 127.0.0.1:9000
+    pm = dynamic
+    pm.max_children = 10
+    pm.start_servers = 2
+    pm.min_spare_servers = 1
+    pm.max_spare_servers = 3
+
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -71,17 +90,38 @@ spec:
           image: nextcloud:22.2.0-fpm-alpine
           resources:
             limits:
-              memory: "768Mi"
+              memory: 768Mi
               cpu: "1"
             requests:
-              memory: "128Mi"
-              cpu: 200m
+              memory: 64Mi
+              cpu: 100m
           volumeMounts:
-            - mountPath: /var/www/html
-              name: nextcloud-app
-            - mountPath: /var/www/html/data
-              name: nextcloud-data
+            # - name: fpm-php-www-config
+            #   mountPath: /usr/local/etc/php-fpm.d
+            - name: nextcloud-app
+              mountPath: /var/www/html
+            - name: nextcloud-data
+              mountPath: /var/www/html/data
           env:
+            - name: REDIS_HOST
+              value: redis
+            - name: POSTGRES_HOST
+              value: postgresql
+            - name: POSTGRES_DB
+              valueFrom:
+                secretKeyRef:
+                  name: postgresql
+                  key: db
+            - name: POSTGRES_USER
+              valueFrom:
+                secretKeyRef:
+                  name: postgresql
+                  key: username
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: postgresql
+                  key: password
             - name: NEXTCLOUD_ADMIN_USER
               valueFrom:
                 secretKeyRef:
@@ -93,41 +133,42 @@ spec:
                   name: nextcloud-admin
                   key: password
             - name: NEXTCLOUD_TRUSTED_DOMAINS
-              value: nextcloud.arnor nextcloud.aman cloud.neumanny.live
-            - name: MYSQL_USER
-              valueFrom:
-                secretKeyRef:
-                  name: nextcloud-password
-                  key: username
-            - name: MYSQL_PASSWORD
-              valueFrom:
-                secretKeyRef:
-                  name: nextcloud-password
-                  key: password
-            - name: MYSQL_DATABASE
-              value: nextcloud
-            - name: MYSQL_HOST
-              value: mariadb
-            - name: REDIS_HOST
-              value: redis
+              value: cloud.neumanny.live
+            - name: TRUSTED_PROXIES
+              value: cloud.neumanny.live 172.104.150.140 10.42.0.0/15
           ports:
             - containerPort: 9000
       volumes:
+        - name: fpm-php-www-config
+          configMap:
+            name: fpm-php-www-config
         - name: nextcloud-app
           persistentVolumeClaim:
-            claimName: app
+            claimName: nextcloud-app
         - name: nextcloud-data
           persistentVolumeClaim:
-            claimName: data
-#      affinity:
-#        nodeAffinity:
-#          requiredDuringSchedulingIgnoredDuringExecution:
-#            nodeSelectorTerms:
-#              - matchExpressions:
-#                - key: tier
-#                  operator: NotIn
-#                  values:
-#                    - db
-#                    - cache
+            claimName: nextcloud-data
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+              - matchExpressions:
+                  - key: kubernetes.io/role
+                    operator: In
+                    values:
+                      - worker
+              - matchExpressions:
+                  - key: lindon.endor/machine-type
+                    operator: In
+                    values:
+                      - pi4-large
+        podAntiAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            - labelSelector:
+                matchExpressions:
+                  - key: app
+                    operator: In
+                    values:
+                      - nextcloud
+              topologyKey: kubernetes.io/hostname
 ---
-

@@ -9,53 +9,53 @@ metadata:
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
-  name: mariadb
+  name: postgresql
   namespace: nextcloud
 spec:
-  storageClassName: longhorn
+  storageClassName: longhorn-ssd-fast
   accessModes:
     - ReadWriteMany
   resources:
     requests:
-      storage: "1Gi"
+      storage: "2Gi"
 ---
 kind: Service
 apiVersion: v1
 metadata:
-  name: mariadb
+  name: postgresql
   namespace: nextcloud
 spec:
   selector:
-    app: mariadb
+    app: postgresql
   ports:
     - protocol: TCP
-      port: 3306
-      targetPort: 3306
+      port: 5432
+      targetPort: 5432
   type: LoadBalancer
 ---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: mariadb
+  name: postgresql
   namespace: nextcloud
   labels:
-    app: mariadb
+    app: postgresql
     tier: db
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: mariadb
+      app: postgresql
       tier: db
   template:
     metadata:
       labels:
-        app: mariadb
+        app: postgresql
         tier: db
     spec:
       containers:
-        - name: mariadb
-          image: mariadb:10.6.4
+        - name: postgresql
+          image: postgres:14.0-alpine
           resources:
             limits:
               memory: 512Gi
@@ -64,32 +64,31 @@ spec:
               memory: 384Mi
               cpu: 200m
           volumeMounts:
-            - mountPath: /var/lib/mysql
-              name: mariadb
+            - mountPath: /var/lib/postgresql
+              name: postgresql
           env:
-            - name: MYSQL_ROOT_PASSWORD
+            - name: POSTGRES_PASSWORD
               valueFrom:
                 secretKeyRef:
-                  name: root-password
+                  name: postgresql
                   key: password
-            - name: MYSQL_USER
+            - name: POSTGRES_USER
               valueFrom:
                 secretKeyRef:
-                  name: nextcloud-password
+                  name: postgresql
                   key: username
-            - name: MYSQL_PASSWORD
+            - name: POSTGRES_DB
               valueFrom:
                 secretKeyRef:
-                  name: nextcloud-password
-                  key: password
-            - name: MYSQL_DATABASE
-              value: nextcloud
+                  name: postgresql
+                  key: db
           ports:
-            - containerPort: 3306
+            - containerPort: 5432
       volumes:
-        - name: mariadb
+        - name: postgresql
           persistentVolumeClaim:
-            claimName: mariadb
-      # nodeSelector:
-      #   disktype: ssd
+            claimName: postgresql
+      nodeSelector:
+        lindon.endor/storage: "true"
+        lindon.endor/storage-ssd: "fast"
 

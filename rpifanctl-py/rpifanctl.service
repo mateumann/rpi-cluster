@@ -1,0 +1,13 @@
+[Unit]
+Description=Raspberry Pi Fan Control
+After=rsyslog.service
+
+[Service]
+Type=simple
+User=root
+ExecStart=/opt/rpifanctl-py/rpifanctl
+Restart=always
+
+[Install]
+WantedBy=default.target
+
