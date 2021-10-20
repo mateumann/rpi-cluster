@@ -13,7 +13,7 @@ metadata:
   name: nginx-logs
   namespace: nextcloud
 spec:
-  storageClassName: longhorn-ssd-fast
+  storageClassName: longhorn-ssd-slow
   accessModes:
     - ReadWriteMany
   resources:
@@ -26,7 +26,7 @@ metadata:
   name: nextcloud-app
   namespace: nextcloud
 spec:
-  storageClassName: longhorn-ssd-slow
+  storageClassName: longhorn-ssd-fast
   accessModes:
     - ReadWriteMany
   resources:
@@ -55,8 +55,8 @@ spec:
   selector:
     app: nextcloud
   ports:
-    - port: 9000
-      targetPort: 9000
+    - port: 80
+      targetPort: 80
       protocol: TCP
   type: LoadBalancer
 ---
@@ -125,7 +125,7 @@ data:
         location ~ ^/(?:\.|autotest|occ|issue|indie|db_|console)                { return 404; }
 
         location ~ \.php(?:$|/) {
-            rewrite ^/(?!index|remote|public|cron|core\/ajax\/update|status|ocs\/v[12]|updater\/.+|oc[ms]-provider\/.+|.+\/richdocumentscode\/proxy) /index.php$request_uri;
+            rewrite ^/(?!info|index|remote|public|cron|core\/ajax\/update|status|ocs\/v[12]|updater\/.+|oc[ms]-provider\/.+|.+\/richdocumentscode\/proxy) /index.php$request_uri;
             fastcgi_split_path_info ^(.+?\.php)(/.*)$;
             set $path_info $fastcgi_path_info;
 
@@ -178,11 +178,32 @@ data:
     group = www-data
     listen = 127.0.0.1:9000
     pm = dynamic
-    pm.max_children = 10
+    pm.max_children = 5
     pm.start_servers = 2
     pm.min_spare_servers = 1
     pm.max_spare_servers = 3
 
+    php_admin_value[upload_max_filesize] = 512M
+    php_admin_value[post_max_size] = 512M
+    php_admin_value[upload_tmp_dir] = /var/www/html/data/tmp
+
+    php_admin_flag[log_errors] = on
+    php_admin_value[error_log] = /var/log/fpm-php.www.log
+    php_flag[display_errors] = on
+  docker.conf: |
+    [global]
+    error_log = /proc/self/fd/2
+    log_limit = 8192
+    [www]
+    access.log = /proc/self/fd/2
+    clear_env = no
+    catch_workers_output = yes
+    decorate_workers_output = no
+  zz-docker.conf: |
+    [global]
+    daemonize = no
+    [www]
+    listen = 9000
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -235,8 +256,8 @@ spec:
               memory: 64Mi
               cpu: 100m
           volumeMounts:
-            # - name: fpm-php-www-config
-            #   mountPath: /usr/local/etc/php-fpm.d
+            - name: fpm-php-www-config
+              mountPath: /usr/local/etc/php-fpm.d
             - name: nextcloud-app
               mountPath: /var/www/html
             - name: nextcloud-data
@@ -261,6 +282,10 @@ spec:
                 secretKeyRef:
                   name: postgresql
                   key: password
+            - name: PHP_UPLOAD_LIMIT
+              value: 512M
+            - name: PHP_POST_LIMIT
+              value: 512M
             - name: NEXTCLOUD_ADMIN_USER
               valueFrom:
                 secretKeyRef:
