@@ -1,0 +1,10 @@
+#!/bin/sh
+
+for U in /sys/bus/usb/devices/usb?/power ; do
+    echo "0" > "${U}/autosuspend"
+    echo "on" > "${U}/level"
+done
+
+for D in /dev/sd? ; do
+    hdparm -B 255 ${D}
+done || echo "No external disks attached"

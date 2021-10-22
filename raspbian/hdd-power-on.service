@@ -1,0 +1,13 @@
+[Unit]
+Description=Raspberry HDD USB Power On
+After=rsyslog.service
+
+[Service]
+Type=oneshot
+User=root
+ExecStart=/opt/hdd-power-on/hdd-power-on
+Restart=on-failure
+
+[Install]
+WantedBy=default.target
+
