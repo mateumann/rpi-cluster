@@ -67,6 +67,17 @@ metadata:
   namespace: nextcloud
 data:
   default.conf: |
+    log_format upstreaminfo
+      '$remote_addr - $request_id - [$proxy_add_x_forwarded_for] - '
+      '$remote_user [$time_local] "$request" $status $body_bytes_sent '
+      '"$http_referer" "$http_user_agent" $request_length $request_time '
+      '$upstream_addr $upstream_response_length '
+      '$upstream_response_time $upstream_status';
+    log_format alt
+      '$http_x_real_ip - $request_id - [$proxy_add_x_forwarded_for] - '
+      '$remote_user [$time_local] "$request" $status $body_bytes_sent '
+      '"$http_referer" "$http_user_agent" - $request_length $request_time';
+
     upstream php-handler {
         server 127.0.0.1:9000;
     }
@@ -78,6 +89,7 @@ data:
         client_max_body_size 512M;
         fastcgi_buffers 64 4K;
 
+        access_log  /var/log/nginx/access.log  alt;
 
         gzip on;
         gzip_vary on;
@@ -214,7 +226,7 @@ metadata:
     app: nextcloud
     tier: app
 spec:
-  replicas: 3
+  replicas: 1
   selector:
     matchLabels:
       app: nextcloud
@@ -297,7 +309,7 @@ spec:
                   name: nextcloud-admin
                   key: password
             - name: NEXTCLOUD_TRUSTED_DOMAINS
-              value: cloud.neumanny.live
+              value: cloud.neumanny.live nextcloud.lindon.endor
             - name: TRUSTED_PROXIES
               value: cloud.neumanny.live 172.104.150.140 10.42.0.0/15
           ports:
