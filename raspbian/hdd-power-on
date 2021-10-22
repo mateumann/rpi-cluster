@@ -8,3 +8,7 @@ done
 for D in /dev/sd? ; do
     hdparm -B 255 ${D}
 done || echo "No external disks attached"
+
+if [ -x $( which smartctl ) -a -w /dev/disk/by-label/storage ] ; then
+    smartctl -s standby=off /dev/disk/by-label/storage
+fi
