@@ -64,7 +64,7 @@ spec:
               memory: 384Mi
               cpu: 200m
           volumeMounts:
-            - mountPath: /var/lib/postgresql
+            - mountPath: /var/lib/postgresql/data
               name: postgresql
           env:
             - name: POSTGRES_PASSWORD
