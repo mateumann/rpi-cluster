@@ -31,7 +31,7 @@ spec:
     - ReadWriteMany
   resources:
     requests:
-      storage: 4Gi
+      storage: 2Gi
 ---
 apiVersion: v1
 kind: PersistentVolumeClaim
@@ -229,7 +229,7 @@ metadata:
     app: nextcloud
     tier: app
 spec:
-  replicas: 4
+  replicas: 3
   selector:
     matchLabels:
       app: nextcloud
