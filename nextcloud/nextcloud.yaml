@@ -262,7 +262,7 @@ spec:
           ports:
             - containerPort: 80
         - name: nextcloud
-          image: nextcloud:22.2.0-fpm-alpine
+          image: nextcloud:22.2.3-fpm-alpine
           resources:
             limits:
               memory: 768Mi
