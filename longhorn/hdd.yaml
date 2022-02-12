@@ -6,7 +6,7 @@ metadata:
   annotations:
     storageclass.kubernetes.io/is-default-class: "true"
 parameters:
-  fsType: xfs
+  fsType: ext4
   diskSelector: hdd
   nodeSelector: hdd
   numberOfReplicas: "3"

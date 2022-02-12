@@ -4,7 +4,7 @@ kind: StorageClass
 metadata:
   name: longhorn-ssd-fast
 parameters:
-  fsType: xfs
+  fsType: ext4
   diskSelector: ssd,fast
   nodeSelector: ssd-fast
   numberOfReplicas: "2"
