@@ -18,7 +18,7 @@ spec:
     - ReadWriteMany
   resources:
     requests:
-      storage: 40Mi
+      storage: 512Mi
 ---
 apiVersion: v1
 kind: PersistentVolumeClaim
@@ -39,7 +39,7 @@ metadata:
   name: plex-data
   namespace: plex
 spec:
-  storageClassName: longhorn-hdd-encrypted
+  storageClassName: longhorn-hdd-crypto
   accessModes:
     - ReadWriteMany
   resources:
@@ -49,7 +49,7 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
-  name: plex
+  name: plex-tcp
   namespace: plex
 spec:
   selector:
@@ -57,7 +57,55 @@ spec:
   ports:
     - port: 32400
       targetPort: 32400
+      name: pms-web
       protocol: TCP
+    - port: 3005
+      targetPort: 3005
+      name: plex-companion
+      protocol: TCP
+    - port: 8324
+      targetPort: 8324
+      name: plex-roku
+      protocol: TCP
+    - port: 32469
+      targetPort: 32469
+      name: dlna-tcp
+      protocol: TCP
+  type: LoadBalancer
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: plex-udp
+  namespace: plex
+spec:
+  selector:
+    app: plex
+  ports:
+    - port: 1900
+      targetPort: 1900
+      name: dlna-udp
+      protocol: UDP
+    - port: 5353
+      targetPort: 5353
+      name: discovery-udp
+      protocol: UDP
+    - port: 32410
+      targetPort: 32410
+      name: gdm-32410
+      protocol: UDP
+    - port: 32412
+      targetPort: 32412
+      name: gdm-32412
+      protocol: UDP
+    - port: 32413
+      targetPort: 32413
+      name: gdm-32413
+      protocol: UDP
+    - port: 32414
+      targetPort: 32414
+      name: gdm-32414
+      protocol: UDP
   type: LoadBalancer
 ---
 apiVersion: apps/v1
@@ -82,7 +130,9 @@ spec:
     spec:
       containers:
         - name: plex
-          image: linuxserver/plex:1.24.5.5173-8dcc73a59-ls87
+          #image: linuxserver/plex:1.24.5.5173-8dcc73a59-ls87
+          image: linuxserver/plex:1.25.3
+          imagePullPolicy: IfNotPresent
           resources:
             limits:
               memory: 1024Mi
@@ -99,18 +149,30 @@ spec:
               mountPath: /media
           ports:
             - containerPort: 32400
+              name: pms-web
             - containerPort: 3005
+              name: plex-companion
             - containerPort: 8324
+              name: plex-roku
             - containerPort: 32469
+              name: dlna-tcp
             - containerPort: 1900
+              name: dlna-udp
+              protocol: UDP
+            - containerPort: 5353
+              name: discovery-udp
               protocol: UDP
             - containerPort: 32410
+              name: gdm-32410
               protocol: UDP
             - containerPort: 32412
+              name: gdm-32412
               protocol: UDP
             - containerPort: 32413
+              name: gdm-32413
               protocol: UDP
             - containerPort: 32414
+              name: gdm-32414
               protocol: UDP
           env:
             - name: PLEX_CLAIM
