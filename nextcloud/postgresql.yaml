@@ -91,6 +91,6 @@ spec:
           persistentVolumeClaim:
             claimName: postgresql
       nodeSelector:
-        lindon.endor/storage: "true"
-        lindon.endor/storage-ssd: "fast"
+        pictaviensis.regnum/storage: "true"
+        pictaviensis.regnum/storage-ssd: "fast"
 

@@ -16,7 +16,7 @@ metadata:
     nginx.ingress.kubernetes.io/proxy-body-size: 5120m
 spec:
   rules:
-    - host: nextcloud.lindon.endor
+    - host: nextcloud.pictaviensis.regnum
       http:
         paths:
           - path: /

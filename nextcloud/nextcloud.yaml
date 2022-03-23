@@ -39,7 +39,7 @@ metadata:
   name: nextcloud-data
   namespace: nextcloud
 spec:
-  storageClassName: longhorn-hdd
+  storageClassName: longhorn-hdd-crypto
   accessModes:
     - ReadWriteMany
   resources:
@@ -242,7 +242,7 @@ spec:
     spec:
       containers:
         - name: nginx
-          image: nginx:1.21.3-alpine
+          image: nginx:1.21.6-alpine
           resources:
             limits:
               memory: 64Mi
@@ -262,7 +262,7 @@ spec:
           ports:
             - containerPort: 80
         - name: nextcloud
-          image: nextcloud:22.2.3-fpm-alpine
+          image: nextcloud:23.0.2-fpm-alpine
           resources:
             limits:
               memory: 768Mi
@@ -312,7 +312,7 @@ spec:
                   name: nextcloud-admin
                   key: password
             - name: NEXTCLOUD_TRUSTED_DOMAINS
-              value: cloud.neumanny.live nextcloud.lindon.endor
+              value: cloud.neumanny.live nextcloud.pictaviensis.regnum
             - name: TRUSTED_PROXIES
               value: cloud.neumanny.live 172.104.150.140 10.42.0.0/15
           ports:
@@ -338,15 +338,31 @@ spec:
           requiredDuringSchedulingIgnoredDuringExecution:
             nodeSelectorTerms:
               - matchExpressions:
-                  - key: kubernetes.io/role
-                    operator: In
+                  - key: kubernetes.io/hostname
+                    operator: NotIn
                     values:
-                      - worker
-              - matchExpressions:
-                  - key: lindon.endor/machine-type
-                    operator: In
-                    values:
-                      - pi4-large
+                      - forlond-2
+        #      - matchExpressions:
+        #          - key: kubernetes.io/role
+        #            operator: In
+        #            values:
+        #              - worker
+        #      - matchExpressions:
+        #          - key: pictaviensis.regnum/machine-type
+        #            operator: In
+        #            values:
+        #              - pi4-large
+        podAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - podAffinityTerm:
+                labelSelector:
+                  matchExpressions:
+                    - key: pictaviensis.regnum/storage
+                      operator: In
+                      values:
+                        - "true"
+                topologyKey: kubernetes.io/hostname
+              weight: 60
         podAntiAffinity:
           preferredDuringSchedulingIgnoredDuringExecution:
             - podAffinityTerm:
@@ -357,5 +373,14 @@ spec:
                       values:
                         - nextcloud
                 topologyKey: kubernetes.io/hostname
-              weight: 100
+              weight: 20
+            #- podAffinityTerm:
+            #    labelSelector:
+            #      matchExpressions:
+            #        - key: kubernetes.io/role
+            #          operator: In
+            #          values:
+            #            - worker
+            #    topologyKey: kubernetes.io/hostname
+            #  weight: 10
 ---
