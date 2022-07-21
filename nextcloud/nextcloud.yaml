@@ -39,7 +39,7 @@ metadata:
   name: nextcloud-data
   namespace: nextcloud
 spec:
-  storageClassName: longhorn-hdd-crypto
+  storageClassName: longhorn-hdd
   accessModes:
     - ReadWriteMany
   resources:
@@ -193,10 +193,10 @@ data:
     group = www-data
     listen = 127.0.0.1:9000
     pm = dynamic
-    pm.max_children = 5
-    pm.start_servers = 2
-    pm.min_spare_servers = 1
-    pm.max_spare_servers = 3
+    pm.max_children = 10
+    pm.start_servers = 4
+    pm.min_spare_servers = 2
+    pm.max_spare_servers = 6
 
     php_admin_value[upload_max_filesize] = 5120M
     php_admin_value[post_max_size] = 5120M
@@ -229,7 +229,7 @@ metadata:
     app: nextcloud
     tier: app
 spec:
-  replicas: 3
+  replicas: 8
   selector:
     matchLabels:
       app: nextcloud
@@ -240,16 +240,23 @@ spec:
         app: nextcloud
         tier: app
     spec:
+      initContainers:
+        - name: volume-mount-hack
+          image: busybox
+          command: ["sh", "-c", "chmod 0770 /var/www/html/data && chown 82:0 /var/www/html/data"]
+          volumeMounts:
+            - name: nextcloud-data
+              mountPath: /var/www/html/data
       containers:
         - name: nginx
-          image: nginx:1.21.6-alpine
+          image: nginx:1.23.0-alpine
           resources:
             limits:
-              memory: 64Mi
               cpu: 200m
+              memory: 64Mi
             requests:
-              memory: 16Mi
               cpu: 50m
+              memory: 16Mi
           volumeMounts:
             - name: nginx-config
               mountPath: /etc/nginx/conf.d
@@ -261,15 +268,21 @@ spec:
               mountPath: /var/www/html/data
           ports:
             - containerPort: 80
+          readinessProbe:
+            httpGet:
+              path: /status.php
+              port: 80
+            failureThreshold: 90
+            periodSeconds: 10
         - name: nextcloud
-          image: nextcloud:23.0.2-fpm-alpine
+          image: nextcloud:24.0.3-fpm-alpine
           resources:
             limits:
+              cpu: 1000m
               memory: 768Mi
-              cpu: "1"
             requests:
-              memory: 64Mi
               cpu: 100m
+              memory: 256Mi
           volumeMounts:
             - name: fpm-php-www-config
               mountPath: /usr/local/etc/php-fpm.d
@@ -277,6 +290,14 @@ spec:
               mountPath: /var/www/html
             - name: nextcloud-data
               mountPath: /var/www/html/data
+          ports:
+            - containerPort: 9000
+          readinessProbe:
+            tcpSocket:
+              port: 9000
+            periodSeconds: 10
+            failureThreshold: 90
+            # allow a container to start for as long as 900s -- Nextcloud upgrade case
           env:
             - name: REDIS_HOST
               value: redis
@@ -315,8 +336,10 @@ spec:
               value: cloud.neumanny.live nextcloud.pictaviensis.regnum
             - name: TRUSTED_PROXIES
               value: cloud.neumanny.live 172.104.150.140 10.42.0.0/15
-          ports:
-            - containerPort: 9000
+            - name: OVERWRITEHOST
+              value: cloud.neumanny.live
+            - name: OVERWRITEPROTOCOL
+              value: https
       volumes:
         - name: fpm-php-www-config
           configMap:
@@ -334,24 +357,6 @@ spec:
           persistentVolumeClaim:
             claimName: nextcloud-data
       affinity:
-        nodeAffinity:
-          requiredDuringSchedulingIgnoredDuringExecution:
-            nodeSelectorTerms:
-              - matchExpressions:
-                  - key: kubernetes.io/hostname
-                    operator: NotIn
-                    values:
-                      - forlond-2
-        #      - matchExpressions:
-        #          - key: kubernetes.io/role
-        #            operator: In
-        #            values:
-        #              - worker
-        #      - matchExpressions:
-        #          - key: pictaviensis.regnum/machine-type
-        #            operator: In
-        #            values:
-        #              - pi4-large
         podAffinity:
           preferredDuringSchedulingIgnoredDuringExecution:
             - podAffinityTerm:
@@ -374,13 +379,90 @@ spec:
                         - nextcloud
                 topologyKey: kubernetes.io/hostname
               weight: 20
-            #- podAffinityTerm:
-            #    labelSelector:
-            #      matchExpressions:
-            #        - key: kubernetes.io/role
-            #          operator: In
-            #          values:
-            #            - worker
-            #    topologyKey: kubernetes.io/hostname
-            #  weight: 10
 ---
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: nextcloud
+spec:
+  schedule: "*/5 * * * *"
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          containers:
+            - name: nextcloud
+              image: nextcloud:24.0.3-fpm-alpine
+              imagePullPolicy: IfNotPresent
+              command:
+                - /bin/sh
+                - -c
+                - apk add sudo perl ; sudo -u '#82' php -d memory_limit=-1 -i ; echo "Executing Nextcloud's cron job" ;  time sudo -u '#82' php -d memory_limit=-1 -f /var/www/html/cron.php
+              resources:
+                limits:
+                  cpu: 1200m
+                  memory: 1024Mi
+                requests:
+                  cpu: 100m
+                  memory: 256Mi
+              volumeMounts:
+                - name: fpm-php-www-config
+                  mountPath: /usr/local/etc/php-fpm.d
+                - name: nextcloud-app
+                  mountPath: /var/www/html
+                - name: nextcloud-data
+                  mountPath: /var/www/html/data
+              env:
+                - name: REDIS_HOST
+                  value: redis
+                - name: POSTGRES_HOST
+                  value: postgresql
+                - name: POSTGRES_DB
+                  valueFrom:
+                    secretKeyRef:
+                      name: postgresql
+                      key: db
+                - name: POSTGRES_USER
+                  valueFrom:
+                    secretKeyRef:
+                      name: postgresql
+                      key: username
+                - name: POSTGRES_PASSWORD
+                  valueFrom:
+                    secretKeyRef:
+                      name: postgresql
+                      key: password
+                - name: PHP_UPLOAD_LIMIT
+                  value: 5120M
+                - name: PHP_POST_LIMIT
+                  value: 5120M
+                - name: NEXTCLOUD_ADMIN_USER
+                  valueFrom:
+                    secretKeyRef:
+                      name: nextcloud-admin
+                      key: username
+                - name: NEXTCLOUD_ADMIN_PASSWORD
+                  valueFrom:
+                    secretKeyRef:
+                      name: nextcloud-admin
+                      key: password
+                - name: NEXTCLOUD_TRUSTED_DOMAINS
+                  value: cloud.neumanny.live nextcloud.pictaviensis.regnum
+                - name: TRUSTED_PROXIES
+                  value: cloud.neumanny.live 172.104.150.140 10.42.0.0/15
+                - name: OVERWRITEHOST
+                  value: cloud.neumanny.live
+                - name: OVERWRITEPROTOCOL
+                  value: https
+          volumes:
+            - name: fpm-php-www-config
+              configMap:
+                name: fpm-php-www-config
+            - name: nextcloud-app
+              persistentVolumeClaim:
+                claimName: nextcloud-app
+            - name: nextcloud-data
+              persistentVolumeClaim:
+                claimName: nextcloud-data
+          restartPolicy: OnFailure
+
