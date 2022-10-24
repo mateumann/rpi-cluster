@@ -13,7 +13,7 @@ metadata:
   name: nginx-logs
   namespace: nextcloud
 spec:
-  storageClassName: longhorn-ssd-slow
+  storageClassName: longhorn-ssd-fast
   accessModes:
     - ReadWriteMany
   resources:
@@ -31,7 +31,27 @@ spec:
     - ReadWriteMany
   resources:
     requests:
-      storage: 2Gi
+      storage: 4Gi
+---
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: nextcloud-data
+  namespace: nextcloud
+spec:
+  capacity:
+    storage: 768Gi
+  volumeMode: Filesystem
+  storageClassName: ""
+  accessModes:
+    - ReadWriteMany
+  persistentVolumeReclaimPolicy: Retain
+  mountOptions:
+    - hard
+    - nfsvers=4.2
+  nfs:
+    server: forlond-2
+    path: /nextcloud-data
 ---
 apiVersion: v1
 kind: PersistentVolumeClaim
@@ -39,12 +59,26 @@ metadata:
   name: nextcloud-data
   namespace: nextcloud
 spec:
-  storageClassName: longhorn-hdd
+  storageClassName: ""
   accessModes:
     - ReadWriteMany
   resources:
     requests:
       storage: 768Gi
+  volumeName: nextcloud-data
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: nextcloud-tmp
+  namespace: nextcloud
+spec:
+  storageClassName: longhorn-ssd-fast
+  accessModes:
+    - ReadWriteMany
+  resources:
+    requests:
+      storage: 8Gi
 ---
 apiVersion: v1
 kind: Service
@@ -89,7 +123,9 @@ data:
         client_max_body_size 5120M;
         fastcgi_buffers 64 4K;
 
-        access_log  /var/log/nginx/access.log  alt;
+        #access_log  /var/log/nginx/access.log  alt;
+        access_log  /proc/self/fd/2  alt;
+        error_log   /proc/self/fd/2;
 
         gzip on;
         gzip_vary on;
@@ -156,7 +192,8 @@ data:
             fastcgi_request_buffering off;
             #fastcgi_temp_path /var/www/html/data/tmp;
 
-            proxy_temp_path /var/www/html/data/tmp;
+            #proxy_temp_path /var/www/html/data/tmp;
+            proxy_temp_path /var/tmp/nginx;
         }
 
         location ~ \.(?:css|js|svg|gif|png|jpg|ico)$ {
@@ -193,7 +230,7 @@ data:
     group = www-data
     listen = 127.0.0.1:9000
     pm = dynamic
-    pm.max_children = 10
+    pm.max_children = 16
     pm.start_servers = 4
     pm.min_spare_servers = 2
     pm.max_spare_servers = 6
@@ -208,6 +245,7 @@ data:
   docker.conf: |
     [global]
     error_log = /proc/self/fd/2
+    ;error_log = /var/log/php-fpm.log
     log_limit = 8192
     [www]
     access.log = /proc/self/fd/2
@@ -217,6 +255,7 @@ data:
   zz-docker.conf: |
     [global]
     daemonize = no
+    ;error_log = /var/log/php-fpm.zz.log
     [www]
     listen = 9000
 ---
@@ -229,7 +268,7 @@ metadata:
     app: nextcloud
     tier: app
 spec:
-  replicas: 8
+  replicas: 4
   selector:
     matchLabels:
       app: nextcloud
@@ -243,13 +282,18 @@ spec:
       initContainers:
         - name: volume-mount-hack
           image: busybox
-          command: ["sh", "-c", "chmod 0770 /var/www/html/data && chown 82:0 /var/www/html/data"]
+          command: ["sh", "-c", "chmod 0770 /var/tmp/nginx && chown 82:0 /var/tmp/nginx"]
+          #command: ["sh", "-c", "whoami; id; ls -la /var/www/html ; ls -la /var/www/html/data"]
           volumeMounts:
+            - name: nextcloud-app
+              mountPath: /var/www/html
             - name: nextcloud-data
               mountPath: /var/www/html/data
+            - name: nextcloud-tmp
+              mountPath: /var/tmp/nginx
       containers:
         - name: nginx
-          image: nginx:1.23.0-alpine
+          image: nginx:1.23.1-alpine
           resources:
             limits:
               cpu: 200m
@@ -266,16 +310,19 @@ spec:
               mountPath: /var/www/html
             - name: nextcloud-data
               mountPath: /var/www/html/data
+            - name: nextcloud-tmp
+              mountPath: /var/tmp/nginx
           ports:
             - containerPort: 80
-          readinessProbe:
-            httpGet:
-              path: /status.php
-              port: 80
-            failureThreshold: 90
-            periodSeconds: 10
+          #readinessProbe:
+          #  httpGet:
+          #    path: /status.php
+          #    port: 80
+          #  initialDelaySeconds: 30
+          #  periodSeconds: 10
+          #  failureThreshold: 3
         - name: nextcloud
-          image: nextcloud:24.0.3-fpm-alpine
+          image: nextcloud:24.0.6-fpm-alpine
           resources:
             limits:
               cpu: 1000m
@@ -290,14 +337,16 @@ spec:
               mountPath: /var/www/html
             - name: nextcloud-data
               mountPath: /var/www/html/data
+            #- name: nextcloud-tmp
+            #  mountPath: /var/www/html/data/tmp
           ports:
             - containerPort: 9000
-          readinessProbe:
-            tcpSocket:
-              port: 9000
-            periodSeconds: 10
-            failureThreshold: 90
-            # allow a container to start for as long as 900s -- Nextcloud upgrade case
+          #readinessProbe:
+          #  tcpSocket:
+          #    port: 9000
+          #  periodSeconds: 10
+          #  failureThreshold: 90
+          #  # allow a container to start for as long as 900s -- Nextcloud upgrade case
           env:
             - name: REDIS_HOST
               value: redis
@@ -356,6 +405,9 @@ spec:
         - name: nextcloud-data
           persistentVolumeClaim:
             claimName: nextcloud-data
+        - name: nextcloud-tmp
+          persistentVolumeClaim:
+            claimName: nextcloud-tmp
       affinity:
         podAffinity:
           preferredDuringSchedulingIgnoredDuringExecution:
@@ -392,12 +444,12 @@ spec:
         spec:
           containers:
             - name: nextcloud
-              image: nextcloud:24.0.3-fpm-alpine
+              image: nextcloud:24.0.4-fpm-alpine
               imagePullPolicy: IfNotPresent
               command:
                 - /bin/sh
                 - -c
-                - apk add sudo perl ; sudo -u '#82' php -d memory_limit=-1 -i ; echo "Executing Nextcloud's cron job" ;  time sudo -u '#82' php -d memory_limit=-1 -f /var/www/html/cron.php
+                - apk add sudo perl ; echo "Executing Nextcloud's cron job" ;  time sudo -u '#82' php -d memory_limit=-1 -f /var/www/html/cron.php
               resources:
                 limits:
                   cpu: 1200m
@@ -412,6 +464,8 @@ spec:
                   mountPath: /var/www/html
                 - name: nextcloud-data
                   mountPath: /var/www/html/data
+                #- name: nextcloud-tmp
+                #  mountPath: /var/www/html/data/tmp
               env:
                 - name: REDIS_HOST
                   value: redis
@@ -464,5 +518,8 @@ spec:
             - name: nextcloud-data
               persistentVolumeClaim:
                 claimName: nextcloud-data
+            #- name: nextcloud-tmp
+            #  persistentVolumeClaim:
+            #    claimName: nextcloud-tmp
           restartPolicy: OnFailure
 
