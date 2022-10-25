@@ -34,17 +34,38 @@ spec:
       storage: 2Gi
 ---
 apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: nextcloud-data
+  namespace: nextcloud
+spec:
+  capacity:
+    storage: 768Gi
+  volumeMode: Filesystem
+  storageClassName: ""
+  accessModes:
+    - ReadWriteMany
+  persistentVolumeReclaimPolicy: Retain
+  mountOptions:
+    - hard
+    - nfsvers=4.2
+  nfs:
+    server: forlond-2
+    path: /nextcloud-data
+---
+apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
   name: nextcloud-data
   namespace: nextcloud
 spec:
-  storageClassName: longhorn-hdd
+  storageClassName: ""
   accessModes:
     - ReadWriteMany
   resources:
     requests:
       storage: 768Gi
+  volumeName: nextcloud-data
 ---
 apiVersion: v1
 kind: Service
@@ -89,7 +110,8 @@ data:
         client_max_body_size 5120M;
         fastcgi_buffers 64 4K;
 
-        access_log  /var/log/nginx/access.log  alt;
+        access_log  /proc/self/fd/2  alt;
+        error_log   /proc/self/fd/2;
 
         gzip on;
         gzip_vary on;
