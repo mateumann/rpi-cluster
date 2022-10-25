@@ -17,7 +17,7 @@ spec:
     - ReadWriteMany
   resources:
     requests:
-      storage: "4Gi"
+      storage: "640Mi"
 ---
 kind: Service
 apiVersion: v1
@@ -55,9 +55,7 @@ spec:
     spec:
       containers:
         - name: postgresql
-          image: postgres:14.5-alpine
-          #image: busybox
-          #command: ["sleep", "999999"]
+          image: postgres:14.1-alpine
           resources:
             limits:
               memory: 512Mi
@@ -70,7 +68,7 @@ spec:
               name: postgresql
           env:
             - name: PGDATA
-              value: /var/lib/postgresql/data/14
+              value: /var/lib/postgresql/data/14.1
             - name: POSTGRES_PASSWORD
               valueFrom:
                 secretKeyRef:

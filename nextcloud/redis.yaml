@@ -55,7 +55,7 @@ spec:
     spec:
       containers:
         - name: redis
-          image: redis:7.0.4-alpine
+          image: redis:6.2.6-alpine
           resources:
             limits:
               memory: 256Mi
