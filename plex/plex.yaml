@@ -150,7 +150,7 @@ spec:
     spec:
       containers:
         - name: plex
-          image: linuxserver/plex:1.28.2
+          image: linuxserver/plex:1.29.1
           imagePullPolicy: IfNotPresent
           resources:
             limits:
