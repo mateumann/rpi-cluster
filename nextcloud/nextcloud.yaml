@@ -8,17 +8,20 @@ metadata:
   name: nextcloud
 ---
 apiVersion: v1
-kind: PersistentVolumeClaim
+kind: PersistentVolume
 metadata:
-  name: nginx-logs
+  name: nextcloud-app
   namespace: nextcloud
 spec:
-  storageClassName: longhorn-ssd-fast
+  capacity:
+    storage: 4Gi
+  volumeMode: Filesystem
+  storageClassName: manual
   accessModes:
     - ReadWriteMany
-  resources:
-    requests:
-      storage: 2Gi
+  persistentVolumeReclaimPolicy: Retain
+  hostPath:
+    path: /mnt/nfs4/nextcloud-app
 ---
 apiVersion: v1
 kind: PersistentVolumeClaim
@@ -26,12 +29,13 @@ metadata:
   name: nextcloud-app
   namespace: nextcloud
 spec:
-  storageClassName: longhorn-ssd-fast
+  storageClassName: manual
   accessModes:
     - ReadWriteMany
   resources:
     requests:
       storage: 4Gi
+  volumeName: nextcloud-app
 ---
 apiVersion: v1
 kind: PersistentVolume
@@ -42,16 +46,12 @@ spec:
   capacity:
     storage: 768Gi
   volumeMode: Filesystem
-  storageClassName: ""
+  storageClassName: manual
   accessModes:
     - ReadWriteMany
   persistentVolumeReclaimPolicy: Retain
-  mountOptions:
-    - hard
-    - nfsvers=4.2
-  nfs:
-    server: forlond-2
-    path: /nextcloud-data
+  hostPath:
+    path: /mnt/nfs4/nextcloud-data
 ---
 apiVersion: v1
 kind: PersistentVolumeClaim
@@ -59,7 +59,7 @@ metadata:
   name: nextcloud-data
   namespace: nextcloud
 spec:
-  storageClassName: ""
+  storageClassName: manual
   accessModes:
     - ReadWriteMany
   resources:
@@ -68,12 +68,28 @@ spec:
   volumeName: nextcloud-data
 ---
 apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: nextcloud-tmp
+  namespace: nextcloud
+spec:
+  capacity:
+    storage: 8Gi
+  volumeMode: Filesystem
+  storageClassName: manual
+  accessModes:
+    - ReadWriteMany
+  persistentVolumeReclaimPolicy: Retain
+  hostPath:
+    path: /mnt/ssd/nextcloud-tmp
+---
+apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
   name: nextcloud-tmp
   namespace: nextcloud
 spec:
-  storageClassName: longhorn-ssd-fast
+  storageClassName: manual
   accessModes:
     - ReadWriteMany
   resources:
@@ -263,7 +279,7 @@ metadata:
     app: nextcloud
     tier: app
 spec:
-  replicas: 4
+  replicas: 1
   selector:
     matchLabels:
       app: nextcloud
@@ -274,10 +290,13 @@ spec:
         app: nextcloud
         tier: app
     spec:
+      # nodeSelector for nextcloud upgrades
+      #nodeSelector:
+      #  kubernetes.io/hostname: forlond-2
       initContainers:
         - name: volume-mount-hack
           image: busybox
-          command: ["sh", "-c", "chmod 0770 /var/tmp/nginx && chown 82:0 /var/tmp/nginx"]
+          command: ["sh", "-c", "chmod 0770 /var/tmp/nginx && chown 82:0 /var/tmp/nginx && ls -ld /var/tmp/nginx /var/www/html /var/www/html/data && ls -l /var/www/html"]
           volumeMounts:
             - name: nextcloud-app
               mountPath: /var/www/html
@@ -287,19 +306,17 @@ spec:
               mountPath: /var/tmp/nginx
       containers:
         - name: nginx
-          image: nginx:1.23.1-alpine
+          image: nginx:1.23.2-alpine
           resources:
             limits:
-              cpu: 200m
-              memory: 64Mi
+              cpu: 500m
+              memory: 128Mi
             requests:
               cpu: 50m
               memory: 16Mi
           volumeMounts:
             - name: nginx-config
               mountPath: /etc/nginx/conf.d
-            - name: nginx-logs
-              mountPath: /var/log/nginx
             - name: nextcloud-app
               mountPath: /var/www/html
             - name: nextcloud-data
@@ -309,13 +326,21 @@ spec:
           ports:
             - containerPort: 80
         - name: nextcloud
-          image: nextcloud:24.0.6-fpm-alpine
+          image: nextcloud:25.0.3-fpm-alpine
+          ports:
+            - containerPort: 9000
+          #livenessProbe:
+          #  path: /ocs/v2.php/apps/serverinfo/api/v1/info
+          #  port: 80
+          #  httpHeaders:
+          #    - name: NC-Token
+          #      value: YSsFQ4Ro3W3j60oP5v6JsulLZRUO2O1PQqh0xSXKVMgqlO8eTZtBUScJhbSLrs9l
           resources:
             limits:
-              cpu: 1000m
-              memory: 768Mi
+              cpu: 2000m
+              memory: 1Gi
             requests:
-              cpu: 100m
+              cpu: 200m
               memory: 256Mi
           volumeMounts:
             - name: fpm-php-www-config
@@ -324,8 +349,6 @@ spec:
               mountPath: /var/www/html
             - name: nextcloud-data
               mountPath: /var/www/html/data
-          ports:
-            - containerPort: 9000
           env:
             - name: REDIS_HOST
               value: redis
@@ -375,9 +398,6 @@ spec:
         - name: nginx-config
           configMap:
             name: nginx-config
-        - name: nginx-logs
-          persistentVolumeClaim:
-            claimName: nginx-logs
         - name: nextcloud-app
           persistentVolumeClaim:
             claimName: nextcloud-app
@@ -417,22 +437,26 @@ metadata:
   name: nextcloud
 spec:
   schedule: "*/5 * * * *"
+  successfulJobsHistoryLimit: 1
+  suspend: false
   jobTemplate:
     spec:
       template:
         spec:
+          nodeSelector:
+            pictaviensis.regnum/type: rpi4-large
           containers:
             - name: nextcloud
-              image: nextcloud:24.0.4-fpm-alpine
+              image: nextcloud:25.0.3-fpm-alpine
               imagePullPolicy: IfNotPresent
               command:
                 - /bin/sh
                 - -c
-                - apk add sudo perl ; echo "Executing Nextcloud's cron job" ;  time sudo -u '#82' php -d memory_limit=-1 -f /var/www/html/cron.php
+                - date ; apk add sudo perl nodejs ; echo "Executing Nextcloud's cron job" ; date ; sudo -u '#82' php -d memory_limit=-1 --define apc.enable_cli=1 -f /var/www/html/cron.php ; sudo -u '#82' php -d memory_limit=-1 -f /var/www/html/occ mail:account:sync 1 ; sudo -u '#82' php -d memory_limit=-1 -f /var/www/html/occ mail:clean-up ; date
               resources:
                 limits:
-                  cpu: 1200m
-                  memory: 1024Mi
+                  cpu: 2500m
+                  memory: 2048Mi
                 requests:
                   cpu: 100m
                   memory: 256Mi
