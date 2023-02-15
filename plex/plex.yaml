@@ -7,17 +7,50 @@ metadata:
   name: plex
 ---
 apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: plex-config
+  namespace: plex
+spec:
+  capacity:
+    storage: 2Gi
+  volumeMode: Filesystem
+  storageClassName: manual
+  accessModes:
+    - ReadWriteMany
+  persistentVolumeReclaimPolicy: Retain
+  hostPath:
+    path: /mnt/nfs_fast/plex-config
+---
+apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
   name: plex-config
   namespace: plex
 spec:
-  storageClassName: longhorn-ssd-fast
+  storageClassName: manual
   accessModes:
     - ReadWriteMany
   resources:
     requests:
-      storage: 512Mi
+      storage: 2Gi
+  volumeName: plex-config
+---
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: plex-transcode
+  namespace: plex
+spec:
+  capacity:
+    storage: 40Gi
+  volumeMode: Filesystem
+  storageClassName: manual
+  accessModes:
+    - ReadWriteMany
+  persistentVolumeReclaimPolicy: Retain
+  hostPath:
+    path: /mnt/ssd/plex-transcode
 ---
 apiVersion: v1
 kind: PersistentVolumeClaim
@@ -25,12 +58,13 @@ metadata:
   name: plex-transcode
   namespace: plex
 spec:
-  storageClassName: longhorn-ssd-fast
+  storageClassName: manual
   accessModes:
     - ReadWriteMany
   resources:
     requests:
       storage: 40Gi
+  volumeName: plex-transcode
 ---
 apiVersion: v1
 kind: PersistentVolume
@@ -41,16 +75,12 @@ spec:
   capacity:
     storage: 768Gi
   volumeMode: Filesystem
-  storageClassName: ""
+  storageClassName: manual
   accessModes:
     - ReadWriteMany
   persistentVolumeReclaimPolicy: Retain
-  nfs:
-    server: forlond-2
-    path: /plex-data
-  mountOptions:
-    - hard
-    - nfsvers=4.2
+  hostPath:
+    path: /mnt/nfs4/plex-data
 ---
 apiVersion: v1
 kind: PersistentVolumeClaim
@@ -58,7 +88,7 @@ metadata:
   name: plex-data
   namespace: plex
 spec:
-  storageClassName: ""
+  storageClassName: manual
   accessModes:
     - ReadWriteMany
   resources:
@@ -148,9 +178,12 @@ spec:
         app: plex
         tier: app
     spec:
+      # nodeSelector for nextcloud upgrades
+      nodeSelector:
+        kubernetes.io/hostname: forlond-3
       containers:
         - name: plex
-          image: linuxserver/plex:1.29.1
+          image: linuxserver/plex:1.30.2
           imagePullPolicy: IfNotPresent
           resources:
             limits:
