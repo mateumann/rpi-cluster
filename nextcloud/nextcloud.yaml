@@ -21,7 +21,7 @@ spec:
     - ReadWriteMany
   persistentVolumeReclaimPolicy: Retain
   hostPath:
-    path: /mnt/nfs4/nextcloud-app
+    path: /mnt/nfs_fast/nextcloud-app
 ---
 apiVersion: v1
 kind: PersistentVolumeClaim
@@ -80,6 +80,7 @@ spec:
   accessModes:
     - ReadWriteMany
   persistentVolumeReclaimPolicy: Retain
+  # A temporary PV can and should be local to the pod
   hostPath:
     path: /mnt/ssd/nextcloud-tmp
 ---
@@ -301,7 +302,7 @@ spec:
     spec:
       # nodeSelector for nextcloud upgrades
       #nodeSelector:
-      #  kubernetes.io/hostname: forlond-2
+      #  kubernetes.io/hostname: forlond-3
       initContainers:
         - name: volume-mount-hack
           image: busybox
