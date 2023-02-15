@@ -7,17 +7,34 @@ metadata:
     name: nextcloud
 ---
 apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: redis
+  namespace: nextcloud
+spec:
+  capacity:
+    storage: 256Mi
+  volumeMode: Filesystem
+  storageClassName: manual
+  accessModes:
+    - ReadWriteMany
+  persistentVolumeReclaimPolicy: Retain
+  hostPath:
+    path: /mnt/ssd/nextcloud-redis
+---
+apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
   name: redis
   namespace: nextcloud
 spec:
-  storageClassName: longhorn-ssd-fast
+  storageClassName: manual
   accessModes:
     - ReadWriteMany
   resources:
     requests:
-      storage: "256Mi"
+      storage: 256Mi
+  volumeName: redis
 ---
 apiVersion: v1
 kind: Service
@@ -55,7 +72,7 @@ spec:
     spec:
       containers:
         - name: redis
-          image: redis:7.0.4-alpine
+          image: redis:7.0.5-alpine
           resources:
             limits:
               memory: 256Mi

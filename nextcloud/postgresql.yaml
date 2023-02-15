@@ -7,17 +7,34 @@ metadata:
     name: nextcloud
 ---
 apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: nextcloud-postgresql
+  namespace: nextcloud
+spec:
+  capacity:
+    storage: 4Gi
+  volumeMode: Filesystem
+  storageClassName: manual
+  accessModes:
+    - ReadWriteMany
+  persistentVolumeReclaimPolicy: Retain
+  hostPath:
+    path: /mnt/nfs_fast/nextcloud-postgresql
+---
+apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
   name: postgresql
   namespace: nextcloud
 spec:
-  storageClassName: longhorn-ssd-fast
+  storageClassName: manual
   accessModes:
     - ReadWriteMany
   resources:
     requests:
       storage: "4Gi"
+  volumeName: nextcloud-postgresql
 ---
 kind: Service
 apiVersion: v1
@@ -53,22 +70,25 @@ spec:
         app: postgresql
         tier: db
     spec:
+      # nodeSelector for nextcloud upgrades
+      nodeSelector:
+        kubernetes.io/hostname: forlond-3
       containers:
         - name: postgresql
-          image: postgres:14.5-alpine
+          image: postgres:15.1-alpine
           resources:
             limits:
-              memory: 512Mi
-              cpu: 1000m
+              cpu: 2000m
+              memory: 1Gi
             requests:
+              cpu: 500m
               memory: 256Mi
-              cpu: 200m
           volumeMounts:
             - mountPath: /var/lib/postgresql/data
               name: postgresql
           env:
             - name: PGDATA
-              value: /var/lib/postgresql/data/14
+              value: /var/lib/postgresql/data/15
             - name: POSTGRES_PASSWORD
               valueFrom:
                 secretKeyRef:
@@ -90,7 +110,7 @@ spec:
         - name: postgresql
           persistentVolumeClaim:
             claimName: postgresql
-      nodeSelector:
-        pictaviensis.regnum/storage: "true"
-        pictaviensis.regnum/storage-ssd: "fast"
+      #nodeSelector:
+      #  pictaviensis.regnum/storage: "true"
+      #  pictaviensis.regnum/storage-ssd: "fast"
 

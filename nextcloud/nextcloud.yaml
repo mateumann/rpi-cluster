@@ -108,6 +108,11 @@ spec:
     - port: 80
       targetPort: 80
       protocol: TCP
+      name: http
+    - port: 9000
+      targetPort: 9000
+      protocol: TCP
+      name: fpm
   type: LoadBalancer
 ---
 apiVersion: v1
@@ -139,8 +144,8 @@ data:
         client_max_body_size 5120M;
         fastcgi_buffers 64 4K;
 
-        access_log  /proc/self/fd/2  alt;
-        error_log   /proc/self/fd/2;
+        access_log  /dev/stdout alt;
+        error_log   /dev/stderr;
 
         gzip on;
         gzip_vary on;
@@ -243,30 +248,34 @@ data:
     group = www-data
     listen = 127.0.0.1:9000
     pm = dynamic
-    pm.max_children = 16
-    pm.start_servers = 4
+    pm.max_children = 6
+    pm.start_servers = 2
     pm.min_spare_servers = 2
-    pm.max_spare_servers = 6
+    pm.max_spare_servers = 4
+    pm.max_requests = 300
 
     php_admin_value[upload_max_filesize] = 5120M
+    php_admin_value[error_log] = /var/log/fpm-php.www.log
     php_admin_value[post_max_size] = 5120M
+    php_admin_value[memory_limit] = 512M
     php_admin_value[upload_tmp_dir] = /var/www/html/data/tmp
 
     php_admin_flag[log_errors] = on
-    php_admin_value[error_log] = /var/log/fpm-php.www.log
     php_flag[display_errors] = on
   docker.conf: |
     [global]
-    error_log = /proc/self/fd/2
+    error_log = /dev/stderr
+    ;error_log = /var/log/php-fpm.log
     log_limit = 8192
     [www]
-    access.log = /proc/self/fd/2
+    access.log = /dev/stdout
     clear_env = no
     catch_workers_output = yes
     decorate_workers_output = no
   zz-docker.conf: |
     [global]
     daemonize = no
+    ;error_log = /var/log/php-fpm.zz.log
     [www]
     listen = 9000
 ---
