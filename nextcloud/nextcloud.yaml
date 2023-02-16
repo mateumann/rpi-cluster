@@ -102,6 +102,8 @@ kind: Service
 metadata:
   name: nextcloud
   namespace: nextcloud
+  annotations:
+    metallb.universe.tf/address-pool: nextcloud
 spec:
   selector:
     app: nextcloud
