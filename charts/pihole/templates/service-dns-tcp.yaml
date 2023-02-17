@@ -3,6 +3,7 @@ apiVersion: v1
 kind: Service
 metadata:
   name: {{ template "pihole.fullname" . }}-dns-tcp
+  namespace: {{ .Values.namespace }}
   labels:
     app: {{ template "pihole.name" . }}
     chart: {{ template "pihole.chart" . }}
@@ -28,12 +29,12 @@ spec:
   {{- end }}
   ports:
     - port: {{ .Values.serviceDns.port }}
-      targetPort: dns
+      targetPort: dns-tcp
       {{- if and (.Values.serviceDns.nodePort) (eq .Values.serviceDns.type "NodePort") }}
       nodePort: {{ .Values.serviceDns.nodePort }}
       {{- end }}
       protocol: TCP
-      name: dns
+      name: dns-tcp
     {{- if .Values.monitoring.sidecar.enabled }}
     - port: {{ .Values.monitoring.sidecar.port }}
       targetPort: prometheus
@@ -49,6 +50,7 @@ apiVersion: v1
 kind: Service
 metadata:
   name: {{ template "pihole.fullname" . }}-dns-tcp-ipv6
+  namespace: {{ .Values.namespace }}
   labels:
     app: {{ template "pihole.name" . }}
     chart: {{ template "pihole.chart" . }}
@@ -71,9 +73,9 @@ spec:
   {{- end }}
   ports:
     - port: {{ .Values.serviceDns.port }}
-      targetPort: dns
+      targetPort: dns-tcp
       protocol: TCP
-      name: dns
+      name: dns-tcp
     {{- if .Values.monitoring.sidecar.enabled }}
     - port: {{ .Values.monitoring.sidecar.port }}
       targetPort: prometheus

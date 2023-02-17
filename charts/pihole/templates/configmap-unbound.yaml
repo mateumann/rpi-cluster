@@ -1,0 +1,48 @@
+{{- if .Values.unbound.enabled }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ template "pihole.fullname" . }}-unbound
+  namespace: {{ .Values.namespace }}
+  labels:
+    app: unbound
+    chart: {{ template "pihole.chart" . }}
+    release: {{ .Release.Name }}
+    heritage: {{ .Release.Service }}
+data:
+  pi-hole.conf: |
+    server:
+      verbosity: 0
+
+      #interface: 127.0.0.1
+      port: 5335
+      do-ip4: yes
+      do-udp: yes
+      do-tcp: yes
+
+      do-ip6: no
+      prefer-ip6: no
+
+      harden-glue: yes
+      harden-dnssec-stripped: yes
+      use-caps-for-id: no
+      edns-buffer-size: 1472
+      prefetch: yes
+      num-threads: 1
+
+      # Ensure kernel buffer is large enough to not lose messages in traffic spikes
+      #so-rcvbuf: 1m
+
+      # Ensure privacy of local IP ranges
+      private-address: 192.168.0.0/16
+      private-address: 169.254.0.0/16
+      private-address: 172.16.0.0/12
+      private-address: 10.0.0.0/8
+      private-address: fd00::/8
+      private-address: fe80::/10
+
+  server: |
+    # The following line will configure unbound to perform cryptographic
+    # DNSSEC validation using the root trust anchor.
+    auto-trust-anchor-file: "/var/lib/unbound/root.key"
+{{- end }}

@@ -13,6 +13,8 @@ metadata:
   name: {{ template "pihole.fullname" . }}-prometheus-exporter
 {{- if .Values.monitoring.podMonitor.namespace }}
   namespace: {{ .Values.monitoring.podMonitor.namespace }}
+{{- else }}
+  namespace: {{ .Values.namespace }}
 {{- end }}
 spec:
   podMetricsEndpoints:

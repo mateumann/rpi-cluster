@@ -1,8 +1,8 @@
-{{ if .Values.adlists }}
+{{ if .Values.customlist }}
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: {{ template "pihole.fullname" . }}-adlists
+  name: {{ template "pihole.fullname" . }}-customlist
   namespace: {{ .Values.namespace }}
   labels:
     app: {{ template "pihole.name" . }}
@@ -10,8 +10,8 @@ metadata:
     release: {{ .Release.Name }}
     heritage: {{ .Release.Service }}
 data:
-  adlists.list: |
-  {{- range .Values.adlists }}
-    {{ . }}
-  {{- end }}
+  custom.list: |
+    {{- range $key, $value := .Values.customlist }}
+      {{ $value }} {{ $key }}
+    {{- end }}
 {{ end }}

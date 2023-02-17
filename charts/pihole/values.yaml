@@ -5,25 +5,28 @@
 # -- The number of replicas
 replicaCount: 1
 
-# -- The `spec.strategyTpye` for updates
+# -- The namespace used to deploy this chart
+namespace: pihole
+
+# -- The `spec.strategyType` for updates
 strategyType: RollingUpdate
 
 # -- The maximum number of Pods that can be created over the desired number of `ReplicaSet` during updating.
 maxSurge: 1
 
-# -- The maximum number of Pods that can be unavailable during updating
+# -- The maximum number of Pods that can be unavailable during updating.
 maxUnavailable: 1
 
 image:
-  # -- the repostory to pull the image from
+  # -- the repository to pull the image from
   repository: "pihole/pihole"
-  # -- the docker tag, if left empty it will get it from the chart's appVersion
+  # -- the docker tag, if left empty it will get it from the chart's appVersion.
   tag: ""
   # -- the pull policy
   pullPolicy: IfNotPresent
 
 dualStack:
-  # -- set this to true to enable creation of DualStack services or creation of separate IPv6 services if `serviceDns.type` is set to `"LoadBalancer"`
+  # -- set this to true to enable creation of DualStack services or creation of separate IPv6 services if `serviceDns.type` is set to `"LoadBalancer"`.
   enabled: false
 
 dnsHostPort:
@@ -52,7 +55,7 @@ serviceDns:
 
   # -- A fixed `spec.loadBalancerIP` for the DNS Service
   loadBalancerIP: ""
-  # -- A fixed `spec.loadBalancerIP` for the IPv6 DNS Service
+  # -- A fixed `spec.loadBalancerIP` for the IPv6 DNS Service.
   loadBalancerIPv6: ""
 
   # -- Annotations for the DNS service
@@ -80,7 +83,7 @@ serviceDhcp:
 
   # -- A fixed `spec.loadBalancerIP` for the DHCP Service
   loadBalancerIP: ""
-  # -- A fixed `spec.loadBalancerIP` for the IPv6 DHCP Service
+  # -- A fixed `spec.loadBalancerIP` for the IPv6 DHCP Service.
   loadBalancerIPv6: ""
 
   # -- Annotations for the DHCP service
@@ -119,9 +122,9 @@ serviceWeb:
   # -- `spec.externalTrafficPolicy` for the web interface Service
   externalTrafficPolicy: Local
 
-  # -- A fixed `spec.loadBalancerIP` for the web interface Service
+  # -- A fixed `spec.loadBalancerIP` for the web interface Service.
   loadBalancerIP: ""
-  # -- A fixed `spec.loadBalancerIP` for the IPv6 web interface Service
+  # -- A fixed `spec.loadBalancerIP` for the IPv6 web interface Service.
   loadBalancerIPv6: ""
 
   # -- Annotations for the DHCP service
@@ -133,7 +136,7 @@ virtualHost: pi.hole
 
 # -- Configuration for the Ingress
 ingress:
-  # -- Generate a Ingress resource
+  # -- Generate an Ingress resource
   enabled: false
 
   # -- Specify an ingressClassName
@@ -145,7 +148,7 @@ ingress:
     # kubernetes.io/tls-acme: "true"
   path: /
   hosts:
-    # virtualHost (default value is pi.hole) will be appended to the hosts
+    # virtualHost (default value is pi.hole) will be appended to the hosts.
     - chart-example.local
   tls: []
   #  - secretName: chart-example-tls
@@ -209,7 +212,7 @@ persistentVolumeClaim:
   ##
   # storageClass: "-"
 
-  ## If subPath is set mount a sub folder of a volume instead of the root of the volume.
+  ## If subPath is set, mount a sub folder of a volume instead of the root of the volume.
   ## This is especially handy for volume plugins that don't natively support sub mounting (like glusterfs).
 
   ## subPath: "pihole"
@@ -231,16 +234,16 @@ topologySpreadConstraints: []
 affinity: {}
 
 # -- Administrator password when not using an existing secret (see below)
-adminPassword: "admin"
+adminPassword: "admin"  # pragma: allowlist secret
 
 # -- Use an existing secret for the admin password.
 admin:
   # -- Specify an existing secret to use as admin password
   existingSecret: ""
   # -- Specify the key inside the secret to use
-  passwordKey: "password"
+  passwordKey: "password"  # pragma: allowlist secret
 
-# -- extraEnvironmentVars is a list of extra enviroment variables to set for pihole to use
+# -- extraEnvironmentVars is a list of extra environment variables to set for pihole to use.
 extraEnvVars: {}
   # TZ: UTC
 
@@ -297,7 +300,7 @@ doh:
       timeoutSeconds: 5
 
 dnsmasq:
-  # -- Add upstream dns servers. All lines will be added to the pihole dnsmasq configuration
+  # -- Add upstream dns servers. All lines will be added to the pihole dnsmasq configuration.
   upstreamServers: []
   # - server=/foo.bar/192.168.178.10
   # - server=/bar.foo/192.168.178.11
@@ -307,7 +310,7 @@ dnsmasq:
   # - address=/foo.bar/192.168.178.10
   # - address=/bar.foo/192.168.178.11
 
-  # -- Dnsmasq reads the /etc/hosts file to resolve ips. You can add additional entries if you like
+  # -- Dnsmasq reads the /etc/hosts file to resolve ips. You can add additional entries if you like.
   additionalHostsEntries: []
   # - 192.168.0.3     host4
   # - 192.168.0.4     host5
@@ -327,40 +330,47 @@ dnsmasq:
   # The format should be:
   #  - cname=cname.foo.bar,foo.bar
   #  - cname=cname.bar.foo,bar.foo
-  #  - cname=cname record,dns record
+  #  - cname=cname record,dns record.
   customCnameEntries: []
   # Here we specify custom cname entries that should point to `A` records or
   # elements in customDnsEntries array.
   # The format should be:
   #   - cname=cname.foo.bar,foo.bar
   #   - cname=cname.bar.foo,bar.foo
-  #   - cname=cname record,dns record
+  #   - cname=cname record,dns record.
 
-# -- list of adlists to import during initial start of the container
+# -- list of adlists to import during initial start of the container.
 adlists: {}
   # If you want to provide blocklists, add them here.
   # - https://hosts-file.net/grm.txt
   # - https://reddestdream.github.io/Projects/MinimalHosts/etc/MinimalHostsBlocker/minimalhosts
 
-# -- list of whitelisted domains to import during initial start of the container
+# -- list of whitelisted domains to import during initial start of the container.
 whitelist: {}
   # If you want to provide whitelisted domains, add them here.
   # - clients4.google.com
 
-# -- list of blacklisted domains to import during initial start of the container
+# -- list of blacklisted domains to import during initial start of the container.
 blacklist: {}
-  # If you want to have special domains blacklisted, add them here
+  # If you want to have special domains blacklisted, add them here.
   # - *.blackist.com
 
-# -- list of blacklisted regex expressions to import during initial start of the container
+# -- list of local DNS records (A/AAAA)
+customlist: {}
+  # If you want to have the list of local DNS records, put them here like this:
+  # example.com: 192.168.1.1
+  # example.org: 192.168.1.2
+
+# -- list of blacklisted regex expressions to import during initial start of the container.
 regex: {}
   # Add regular expression blacklist items
   # - (^|\.)facebook\.com$
 
 # -- values that should be added to pihole-FTL.conf
-ftl: {}
+ftl:
   # Add values for pihole-FTL.conf
   # MAXDBDAYS: 14
+  PRIVACYLEVEL: 0
 
 # -- port the container should use to expose HTTP traffic
 webHttp: "80"
@@ -463,3 +473,11 @@ podDnsConfig:
   nameservers:
   - 127.0.0.1
   - 8.8.8.8
+
+unbound:
+  enabled: false
+  image:
+    repository: "klutchell/unbound"
+    tag: "latest"
+    pullPolicy: IfNotPresent
+  port: 5335

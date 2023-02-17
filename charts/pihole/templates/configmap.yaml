@@ -2,6 +2,7 @@ apiVersion: v1
 kind: ConfigMap
 metadata:
   name: {{ template "pihole.fullname" . }}-custom-dnsmasq
+  namespace: {{ .Values.namespace }}
   labels:
     app: {{ template "pihole.name" . }}
     chart: {{ template "pihole.chart" . }}
@@ -15,6 +16,9 @@ data:
   {{- end }}
   {{- range .Values.dnsmasq.customDnsEntries }}
     {{ . }}
+  {{- end }}
+  {{- range $key, $value := .Values.customlist }}
+    address=/{{ $key }}/{{ $value }}
   {{- end }}
   {{- if .Values.serviceDns.loadBalancerIP }}
     dhcp-option=6,{{ .Values.serviceDns.loadBalancerIP }}

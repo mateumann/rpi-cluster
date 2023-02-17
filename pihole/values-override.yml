@@ -1,0 +1,193 @@
+replicaCount: 1
+
+image:
+  repository: "pihole/pihole"
+  tag: "2023.02.2"
+  pullPolicy: IfNotPresent
+
+dnsHostPort:
+  enabled: true
+
+serviceDns:
+  mixedService: true
+  type: LoadBalancer
+  loadBalancerIP: 192.168.82.53
+  annotations:
+    metallb.universe.tf/address-pool: pihole
+    metallb.universe.tf/allow-shared-ip: pihole-svc
+
+serviceDhcp:
+  enabled: false
+
+serviceWeb:
+  type: LoadBalancer
+  loadBalancerIP: 192.168.82.53
+  annotations:
+    metallb.universe.tf/address-pool: pihole
+    metallb.universe.tf/allow-shared-ip: pihole-svc
+
+virtualHost: pi.hole
+
+ingress:
+  enabled: true
+  hosts:
+    - pihole.pictaviensis.regnum
+
+resources:
+  limits:
+   cpu: 1000m
+   memory: 512Mi
+  requests:
+   cpu: 200m
+   memory: 256Mi
+
+persistentVolumeClaim:
+  enabled: true
+  existingClaim: "pihole-config"
+
+nodeSelector:
+  kubernetes.io/hostname: forlond-3
+
+admin:
+  existingSecret: "pihole-admin"  # pragma: allowlist secret
+  passwordKey: "password"         # pragma: allowlist secret
+
+extraEnvVars:
+  TZ: Europe/Warsaw
+  ADMIN_EMAIL: home@neumanny.net
+  WEBUIBOXEDLAYOUT: boxed
+  DNS_FQDN_REQUIRED: true
+  DNS_BOGUS_PRIV: true
+
+#DNS1: "9.9.9.9"
+#DNS2: "1.1.1.1"
+
+dnsmasq:
+  customCnameEntries:
+    - cname=gw.regnum,gw.insulafranciae.regnum
+    - cname=sw0.regnum,sw0.insulafranciae.regnum
+    - cname=sw1.regnum,sw1.insulafranciae.regnum
+    - cname=ap0.regnum,ap0.insulafranciae.regnum
+    - cname=ap1.regnum,ap1.insulafranciae.regnum
+    - cname=pi.regnum,pi.insulafranciae.regnum
+    - cname=rivendell.regnum,rivendell.linguadocia.regnum
+    - cname=printer.regnum,printer.linguadocia.regnum
+    - cname=forlond-1.regnum,forlond-1.pictaviensis.regnum
+    - cname=forlond-2.regnum,forlond-2.pictaviensis.regnum
+    - cname=forlond-3.regnum,forlond-3.pictaviensis.regnum
+    - cname=harlond-1.regnum,harlond-1.pictaviensis.regnum
+    - cname=harlond-2.regnum,harlond-2.pictaviensis.regnum
+    - cname=harlond-3.regnum,harlond-3.pictaviensis.regnum
+    - cname=harlond-4.regnum,harlond-4.pictaviensis.regnum
+    - cname=forlond.pictaviensis.regnum,mithlond.pictaviensis.regnum
+    - cname=cloud.neumanny.live,mithlond.pictaviensis.regnum
+    - cname=media.neumanny.live,mithlond.pictaviensis.regnum
+
+adlists:
+  - https://raw.githubusercontent.com/StevenBlack/hosts/master/hosts
+#  - https://s3.amazonaws.com/lists.disconnect.me/simple_tracking.txt
+#  - https://s3.amazonaws.com/lists.disconnect.me/simple_ad.txt
+#  - https://raw.githubusercontent.com/FadeMind/hosts.extras/master/add.Spam/hosts
+#  - https://v.firebog.net/hosts/static/w3kbl.txt
+#  - https://raw.githubusercontent.com/matomo-org/referrer-spam-blacklist/master/spammers.txt
+#  - https://someonewhocares.org/hosts/zero/hosts
+#  - https://raw.githubusercontent.com/vokins/yhosts/master/hosts
+#  - https://winhelp2002.mvps.org/hosts.txt
+#  - https://v.firebog.net/hosts/neohostsbasic.txt
+#  - https://raw.githubusercontent.com/RooneyMcNibNug/pihole-stuff/master/SNAFU.txt
+#  - https://paulgb.github.io/BarbBlock/blacklists/hosts-file.txt
+#  - https://adaway.org/hosts.txt
+#  - https://v.firebog.net/hosts/AdguardDNS.txt
+#  - https://v.firebog.net/hosts/Admiral.txt
+#  - https://raw.githubusercontent.com/anudeepND/blacklist/master/adservers.txt
+#  - https://v.firebog.net/hosts/Easylist.txt
+#  - https://pgl.yoyo.org/adservers/serverlist.php?hostformat=hosts&showintro=0&mimetype=plaintext
+#  - https://raw.githubusercontent.com/FadeMind/hosts.extras/master/UncheckyAds/hosts
+#  - https://raw.githubusercontent.com/bigdargon/hostsVN/master/hosts
+#  - https://raw.githubusercontent.com/jdlingyu/ad-wars/master/hosts
+#  - https://v.firebog.net/hosts/Easyprivacy.txt
+#  - https://v.firebog.net/hosts/Prigent-Ads.txt
+#  - https://gitlab.com/quidsup/notrack-blocklists/raw/master/notrack-blocklist.txt
+#  - https://raw.githubusercontent.com/FadeMind/hosts.extras/master/add.2o7Net/hosts
+#  - https://raw.githubusercontent.com/crazy-max/WindowsSpyBlocker/master/data/hosts/spy.txt
+#  - https://www.github.developerdan.com/hosts/lists/ads-and-tracking-extended.txt
+#  - https://raw.githubusercontent.com/Perflyst/PiHoleBlocklist/master/android-tracking.txt
+#  - https://raw.githubusercontent.com/Perflyst/PiHoleBlocklist/master/SmartTV.txt
+#  - https://raw.githubusercontent.com/Perflyst/PiHoleBlocklist/master/AmazonFireTV.txt
+#  - https://raw.githubusercontent.com/DandelionSprout/adfilt/master/Alternate%20versions%20Anti-Malware%20List/AntiMalwareHosts.txt
+#  - https://osint.digitalside.it/Threat-Intel/lists/latestdomains.txt
+#  - https://s3.amazonaws.com/lists.disconnect.me/simple_malvertising.txt
+#  - https://v.firebog.net/hosts/Prigent-Crypto.txt
+#  - https://bitbucket.org/ethanr/dns-blacklists/raw/8575c9f96e5b4a1308f2f12394abd86d0927a4a0/bad_lists/Mandiant_APT1_Report_Appendix_D.txt
+#  - https://phishing.army/download/phishing_army_blocklist_extended.txt
+#  - https://gitlab.com/quidsup/notrack-blocklists/raw/master/notrack-malware.txt
+#  - https://raw.githubusercontent.com/Spam404/lists/master/main-blacklist.txt
+#  - https://raw.githubusercontent.com/FadeMind/hosts.extras/master/add.Risk/hosts
+#  - https://urlhaus.abuse.ch/downloads/hostfile/
+#  - https://v.firebog.net/hosts/Prigent-Malware.txt
+#  - https://raw.githubusercontent.com/HorusTeknoloji/TR-PhishingList/master/url-lists.txt
+#  - https://zerodot1.gitlab.io/CoinBlockerLists/hosts_browser
+#  - https://raw.githubusercontent.com/chadmayfield/my-pihole-blocklists/master/lists/pi_blocklist_porn_all.list
+#  - https://raw.githubusercontent.com/chadmayfield/my-pihole-blocklists/master/lists/pi_blocklist_porn_top1m.list
+
+customlist:
+  gw.insulafranciae.regnum: 192.168.80.1
+  sw0.insulafranciae.regnum: 192.168.80.2
+  sw1.insulafranciae.regnum: 192.168.80.3
+  ap0.insulafranciae.regnum: 192.168.80.4
+  ap1.insulafranciae.regnum: 192.168.80.5
+  pi.insulafranciae.regnum: 192.168.80.9
+  rhea.linguadocia.regnum: 192.168.81.16
+  iapetus.linguadocia.regnum: 192.168.81.17
+  pelori.linguadocia.regnum: 192.168.81.24
+  tookbank.linguadocia.regnum: 192.168.81.25
+  op7.linguadocia.regnum: 192.168.81.64
+  opo.linguadocia.regnum: 192.168.81.65
+  mia3.linguadocia.regnum: 192.168.81.66
+  note8t.linguadocia.regnum: 192.168.81.67
+  opn2.linguadocia.regnum: 192.168.81.68
+  mi11.linguadocia.regnum: 192.168.81.69
+  tab2.linguadocia.regnum: 192.168.81.70
+  mithlond.pictaviensis.regnum: 192.168.82.16
+  forlond-1.pictaviensis.regnum: 192.168.82.17
+  forlond-2.pictaviensis.regnum: 192.168.82.18
+  forlond-3.pictaviensis.regnum: 192.168.82.19
+  harlond-1.pictaviensis.regnum: 192.168.82.20
+  harlond-2.pictaviensis.regnum: 192.168.82.21
+  harlond-3.pictaviensis.regnum: 192.168.82.22
+  harlond-4.pictaviensis.regnum: 192.168.82.23
+  rhea.andecavensis.regnum: 192.168.83.80
+  iapetus.andecavensis.regnum: 192.168.83.81
+  rivendell.andecavensis.regnum: 192.168.83.96
+  printer.andecavensis.regnum: 192.168.83.126
+  inwerter.saxoniae.regnum: 192.168.87.108
+  fr955.suebia.regnum: 192.168.88.72
+  drone.suebia.regnum: 192.168.88.88
+  s6maxv.suebia.regnum: 192.168.88.109
+
+
+# -- list of blacklisted regex expressions to import during initial start of the container.
+regex:
+  # Add regular expression blacklist items
+  # - (^|\.)facebook\.com$
+  - \.regnum$;querytype=AAAA
+
+
+ftl:
+  PRIVACYLEVEL: 0
+
+podDnsConfig:
+  enabled: true
+  policy: "None"
+  nameservers:
+  - 127.0.0.1
+  - 192.168.80.1
+
+unbound:
+  enabled: true
+  podDnsConfig:
+    enabled: true
+    nameservers:
+    - 9.9.9.9
+    - 1.1.1.1
+    - 192.168.80.1

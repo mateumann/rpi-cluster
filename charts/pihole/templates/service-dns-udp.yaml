@@ -3,6 +3,7 @@ apiVersion: v1
 kind: Service
 metadata:
   name: {{ template "pihole.fullname" . }}-dns-udp
+  namespace: {{ .Values.namespace }}
   labels:
     app: {{ template "pihole.name" . }}
     chart: {{ template "pihole.chart" . }}
@@ -43,6 +44,7 @@ apiVersion: v1
 kind: Service
 metadata:
   name: {{ template "pihole.fullname" . }}-dns-udp-ipv6
+  namespace: {{ .Values.namespace }}
   labels:
     app: {{ template "pihole.name" . }}
     chart: {{ template "pihole.chart" . }}

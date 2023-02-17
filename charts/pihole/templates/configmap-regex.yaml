@@ -3,6 +3,7 @@ apiVersion: v1
 kind: ConfigMap
 metadata:
   name: {{ template "pihole.fullname" . }}-regex
+  namespace: {{ .Values.namespace }}
   labels:
     app: {{ template "pihole.name" . }}
     chart: {{ template "pihole.chart" . }}

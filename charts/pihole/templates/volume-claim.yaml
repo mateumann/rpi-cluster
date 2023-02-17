@@ -3,6 +3,8 @@
 apiVersion: "v1"
 kind: "PersistentVolumeClaim"
 metadata:
+  name: {{ template "pihole.fullname" . }}
+  namespace: {{ .Values.namespace }}
 {{- if .Values.persistentVolumeClaim.annotations }}
   annotations:
 {{ toYaml .Values.persistentVolumeClaim.annotations | indent 4 }}
@@ -13,7 +15,6 @@ metadata:
     component: "{{ .Values.persistentVolumeClaim.name }}"
     heritage: {{ .Release.Service }}
     release: {{ .Release.Name }}
-  name: {{ template "pihole.fullname" . }}
 spec:
   accessModes:
 {{ toYaml .Values.persistentVolumeClaim.accessModes | indent 4 }}
