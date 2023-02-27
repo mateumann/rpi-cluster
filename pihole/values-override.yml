@@ -134,6 +134,7 @@ customlist:
   ap0.insulafranciae.regnum: 192.168.80.4
   ap1.insulafranciae.regnum: 192.168.80.5
   pi.insulafranciae.regnum: 192.168.80.9
+  gw.linguadocia.regnum: 192.168.81.1
   rhea.linguadocia.regnum: 192.168.81.16
   iapetus.linguadocia.regnum: 192.168.81.17
   pelori.linguadocia.regnum: 192.168.81.24
@@ -145,6 +146,7 @@ customlist:
   opn2.linguadocia.regnum: 192.168.81.68
   mi11.linguadocia.regnum: 192.168.81.69
   tab2.linguadocia.regnum: 192.168.81.70
+  gw.pictaviensis.regnum: 192.168.82.1
   mithlond.pictaviensis.regnum: 192.168.82.16
   forlond-1.pictaviensis.regnum: 192.168.82.17
   forlond-2.pictaviensis.regnum: 192.168.82.18
@@ -153,14 +155,18 @@ customlist:
   harlond-2.pictaviensis.regnum: 192.168.82.21
   harlond-3.pictaviensis.regnum: 192.168.82.22
   harlond-4.pictaviensis.regnum: 192.168.82.23
+  gw.andecavensis.regnum: 192.168.83.1
   rhea.andecavensis.regnum: 192.168.83.80
   iapetus.andecavensis.regnum: 192.168.83.81
   rivendell.andecavensis.regnum: 192.168.83.96
   printer.andecavensis.regnum: 192.168.83.126
+  gw.saxoniae.regnum: 192.168.87.1
   inwerter.saxoniae.regnum: 192.168.87.108
+  gw.suebia.regnum: 192.168.88.1
   fr955.suebia.regnum: 192.168.88.72
   drone.suebia.regnum: 192.168.88.88
   s6maxv.suebia.regnum: 192.168.88.109
+  gw.bavaria.regnum: 192.168.89.1
 
 
 # -- list of blacklisted regex expressions to import during initial start of the container.
